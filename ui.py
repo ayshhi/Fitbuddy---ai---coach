@@ -698,3 +698,114 @@ BREATHE_HTML = """
 <div style="color:var(--muted);text-align:center;max-width:22rem">Breathe with the circle for one minute.
 Cravings rise and fall like a wave, so you don't have to act on this one straight away.</div></div>
 """
+
+
+# ---------- Prettier controls: number boxes, sliders, choice pills, buttons, cards ----------
+# These style Streamlit's own widgets. If a future Streamlit version renames something,
+# the widget simply keeps its normal look, so nothing breaks.
+
+WIDGET_CSS = """
+<style>
+/* soft pastel glow behind every page */
+.stApp { background:
+  radial-gradient(circle at 8% 0%, #F1E4FF 0, rgba(241,228,255,0) 38%),
+  radial-gradient(circle at 95% 12%, #FDE6F3 0, rgba(253,230,243,0) 32%),
+  radial-gradient(circle at 50% 100%, #E6F6EE 0, rgba(230,246,238,0) 40%), #FAF7FD; }
+
+/* labels */
+.stApp [data-testid="stWidgetLabel"] p { font-weight: 700 !important; color: #4E2A84 !important; }
+
+/* ----- number boxes with big round - / + buttons ----- */
+[data-testid="stNumberInputContainer"] { background:#FFFFFF !important; border:1.5px solid #E6DDF3 !important;
+  border-radius: 18px !important; min-height: 3.4rem; align-items:center; padding-right:.3rem;
+  box-shadow: 0 2px 10px rgba(78,42,132,.05); transition: border-color .2s, box-shadow .2s; }
+[data-testid="stNumberInputContainer"]:focus-within { border-color:#9B6BD6 !important; box-shadow: 0 0 0 4px rgba(155,107,214,.15); }
+[data-testid="stNumberInput"] input { background:#FFFFFF !important; font-size: 1.25rem !important; font-weight: 800 !important;
+  color:#2A2140 !important; padding-left: 1rem !important; }
+[data-testid="stNumberInput"] div[data-baseweb="input"] { background: transparent !important; border: none !important; }
+button[data-testid="stNumberInputStepDown"], button[data-testid="stNumberInputStepUp"] {
+  width: 2.7rem !important; height: 2.7rem !important; min-width: 2.7rem; margin: 0 .2rem !important; border-radius: 50% !important;
+  border: none !important; background: #F1EAFB !important; color: #7B3FBF !important; transition: transform .12s, background .2s; }
+button[data-testid="stNumberInputStepUp"] { background: linear-gradient(135deg, #7B3FBF, #9B5DE5) !important; color:#FFFFFF !important; }
+button[data-testid="stNumberInputStepDown"]:hover { background:#E3D3F8 !important; }
+button[data-testid="stNumberInputStepUp"]:hover { filter: brightness(1.1); }
+button[data-testid="stNumberInputStepDown"]:active, button[data-testid="stNumberInputStepUp"]:active { transform: scale(.9); }
+button[data-testid="stNumberInputStepDown"] svg, button[data-testid="stNumberInputStepUp"] svg { width: 1.25rem; height: 1.25rem; }
+
+/* ----- text boxes ----- */
+[data-testid="stTextInput"] div[data-baseweb="input"], [data-testid="stTextArea"] div[data-baseweb="textarea"],
+[data-testid="stDateInput"] div[data-baseweb="input"], div[data-baseweb="select"] > div {
+  background:#FFFFFF !important; border:1.5px solid #E6DDF3 !important; border-radius: 16px !important; min-height: 3.1rem; }
+[data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea, [data-testid="stDateInput"] input {
+  background:#FFFFFF !important; font-size: 1.05rem !important; }
+
+/* ----- sliders: thick track, big glowing handle ----- */
+[data-testid="stSlider"] { padding: .3rem .4rem 0; }
+[data-testid="stSlider"] div[data-baseweb="slider"] > div > div:not([role="slider"]) { height: .6rem !important; border-radius: 99px !important; }
+[data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"] { width: 1.9rem !important; height: 1.9rem !important; background: #FFFFFF !important;
+  border: 5px solid #7B3FBF !important; box-shadow: 0 4px 14px rgba(123,63,191,.4) !important; transition: transform .15s; }
+[data-testid="stSlider"] div[data-baseweb="slider"] div[role="slider"]:hover { transform: scale(1.12); }
+[data-testid="stSliderThumbValue"] { background: #7B3FBF; color: #FFFFFF !important; padding: .1rem .55rem; border-radius: 99px;
+  font-weight: 800; top: -2.1rem !important; }
+[data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] { font-weight: 700; color: #9A90AE; }
+
+/* ----- choices (radio) as pills, in the page (not the sidebar menu) ----- */
+[data-testid="stMain"] [data-testid="stRadio"] div[role="radiogroup"] { gap: .55rem !important; flex-wrap: wrap; }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"] { background:#FFFFFF; border:1.5px solid #E6DDF3;
+  border-radius: 999px; padding: .5rem 1.05rem !important; margin: 0 !important; cursor:pointer;
+  transition: background .2s, border-color .2s, transform .12s, box-shadow .2s; }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"]:hover { border-color:#C38BEA; transform: translateY(-1px); }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child:not(:has([data-testid="stMarkdownContainer"])) { display:none; }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
+  background: linear-gradient(135deg, #7B3FBF, #9B5DE5); border-color: transparent; box-shadow: 0 6px 16px rgba(123,63,191,.3); }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p { color:#FFFFFF !important; font-weight:700; }
+
+/* ----- sidebar menu ----- */
+section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] { width:100%; padding:.55rem .8rem !important;
+  border-radius: 14px; margin: .1rem 0 !important; transition: background .2s; }
+section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:hover { background:#F4EEFC; }
+section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child:not(:has([data-testid="stMarkdownContainer"])) { display:none; }
+section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) { background:#EDE2FB; }
+section[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p { color:#4E2A84 !important; font-weight:800; }
+
+/* ----- buttons ----- */
+.stButton button, .stDownloadButton button, .stLinkButton a, [data-testid="stFormSubmitButton"] button {
+  border-radius: 999px !important; padding: .55rem 1.3rem !important; min-height: 2.9rem; font-weight: 700 !important;
+  transition: transform .12s, box-shadow .2s, filter .2s; }
+.stButton button:active, [data-testid="stFormSubmitButton"] button:active { transform: scale(.97); }
+button[kind="primary"], button[data-testid="stBaseButton-primary"], button[data-testid="stBaseButton-primaryFormSubmit"] {
+  background: linear-gradient(135deg, #7B3FBF, #A66BE0) !important; border: none !important; color:#FFFFFF !important;
+  box-shadow: 0 8px 20px rgba(123,63,191,.28) !important; }
+button[kind="primary"]:hover, button[data-testid="stBaseButton-primary"]:hover { filter: brightness(1.08); }
+
+/* ----- every bordered box becomes a soft white card ----- */
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
+  background: rgba(255,255,255,.92); border: 1px solid #E6DDF3 !important; border-radius: 22px !important;
+  box-shadow: 0 6px 24px rgba(78,42,132,.06); }
+div[data-testid="stForm"] { background: rgba(255,255,255,.7) !important; border: 1px solid #E6DDF3 !important; border-radius: 24px !important; }
+div[data-testid="stExpander"] { background:#FFFFFF; border: 1px solid #E6DDF3 !important; border-radius: 18px !important; }
+div[data-testid="stExpander"] summary p { font-weight: 700 !important; color: #4E2A84 !important; }
+
+/* coloured accent strip on the check-in cards */
+.st-key-ck_sleep, .st-key-ck_food, .st-key-ck_feel { position: relative; overflow: hidden; }
+.st-key-ck_sleep::before, .st-key-ck_food::before, .st-key-ck_feel::before { content:""; position:absolute; left:0; top:0; right:0; height:6px; }
+.st-key-ck_sleep::before { background: linear-gradient(90deg, #7CC4F5, #9B8CF0); }
+.st-key-ck_food::before { background: linear-gradient(90deg, #F7B267, #F28B82); }
+.st-key-ck_feel::before { background: linear-gradient(90deg, #E58FC7, #C38BEA); }
+
+/* card headers with an icon tile */
+.ck-head { display:flex; align-items:center; gap:.9rem; margin: .2rem 0 .4rem; }
+.ck-head .ic { width: 3rem; height: 3rem; border-radius: 16px; display:flex; align-items:center; justify-content:center; font-size: 1.6rem; }
+.ck-head b { font-size: 1.25rem; color: #2A2140; display:block; }
+.ck-head span { font-size: .88rem; color: #786E8C; }
+</style>
+"""
+
+
+def inject_widget_css() -> None:
+    st.markdown(WIDGET_CSS, unsafe_allow_html=True)
+
+
+def card_header(icon: str, title: str, subtitle: str = "", tint: str = "#F1EAFB") -> None:
+    st.markdown(f'<div class="ck-head"><div class="ic" style="background:{tint}">{icon}</div>'
+                f'<div><b>{html.escape(title)}</b><span>{subtitle}</span></div></div>', unsafe_allow_html=True)

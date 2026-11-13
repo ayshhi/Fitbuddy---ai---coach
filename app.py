@@ -26,6 +26,7 @@ ui.inject_css()
 ui.inject_card_css()
 ui.inject_page_css()
 ui.inject_spacing_css()
+ui.inject_widget_css()
 
 
 def show_error(err: Exception) -> None:
@@ -153,40 +154,46 @@ elif page == "🏠 Today":
         """Use the saved check-in value, else the Samsung value, else a default."""
         return existing.get(key, sh.get(sh_key, default))
 
-    with st.form("checkin"):
-        st.subheader("😴 Sleep & activity")
-        st.caption("✅ Filled in from Samsung Health" if sh else
-                   "Copy these from Samsung Health, or import your data on 📊 Progress.")
-        c1, c2, c3 = st.columns(3)
-        sleep_hours = c1.number_input("Sleep (hours)", 0.0, 16.0, float(prefill("sleep_hours", "sleep_hours", 7.0)), 0.5)
-        steps = c2.number_input("Steps", 0, 100000, int(prefill("steps", "steps", 0)), 500)
-        distance_km = c3.number_input("Distance (km)", 0.0, 100.0, float(prefill("distance_km", "distance_km", 0.0)), 0.1)
+    with st.form("checkin", border=False):
+        top_left, top_right = st.columns(2)
+        with top_left.container(border=True, key="ck_sleep"):
+            ui.card_header("😴", "Sleep & activity",
+                           "✅ Filled in from Samsung Health" if sh else "Copy these from Samsung Health, or import on 📊 Progress",
+                           tint="#E5F2FD")
+            sleep_hours = st.number_input("Sleep (hours)", 0.0, 16.0, float(prefill("sleep_hours", "sleep_hours", 7.0)), 0.5)
+            c1, c2 = st.columns(2)
+            steps = c1.number_input("Steps", 0, 100000, int(prefill("steps", "steps", 0)), 500)
+            distance_km = c2.number_input("Distance (km)", 0.0, 100.0, float(prefill("distance_km", "distance_km", 0.0)), 0.5)
 
-        st.subheader("🍽️ Food & exercise")
-        scanned = storage.day_calories(day)
-        if scanned:
-            st.caption(f"📸 From your food scans: **{scanned} kcal** ({storage.day_foods(day)})")
-        calories = st.number_input(
-            "Calories eaten today (approx.)", 0, 10000, scanned or int(existing.get("calories", 0)), 50,
-            help="Filled in automatically from 📸 Food scan. You can also type an estimate.",
-        )
-        c4, c5 = st.columns([2, 1])
-        default_ex = f"Walk ({sh['workout_km']} km)" if sh.get("workout_min") else ""
-        exercise = c4.text_input("Exercise done", existing.get("exercise", default_ex), placeholder="e.g. 30 min walk, yoga")
-        exercise_minutes = c5.number_input("Minutes", 0, 600, int(prefill("exercise_minutes", "workout_min", 0)), 5)
-        weight_kg = st.number_input(
-            "Weight (kg, optional)", 0.0, 300.0, float(prefill("weight_kg", "weight_kg", 0.0)), 0.1,
-            help="Optional. Once a week is plenty. Daily weight goes up and down with water, periods and salt.",
-        )
+        with top_right.container(border=True, key="ck_food"):
+            scanned = storage.day_calories(day)
+            ui.card_header("🍽️", "Food & exercise",
+                           f"📸 {scanned} kcal from your food scans" if scanned else "Scan meals on 📸 Food scan to fill this in",
+                           tint="#FEF0E1")
+            calories = st.number_input(
+                "Calories eaten today (approx.)", 0, 10000, scanned or int(existing.get("calories", 0)), 50,
+                help="Filled in automatically from 📸 Food scan. You can also type an estimate.",
+            )
+            c4, c5 = st.columns([3, 2])
+            default_ex = f"Walk ({sh['workout_km']} km)" if sh.get("workout_min") else ""
+            exercise = c4.text_input("Exercise done", existing.get("exercise", default_ex), placeholder="e.g. walk, yoga")
+            exercise_minutes = c5.number_input("Minutes", 0, 600, int(prefill("exercise_minutes", "workout_min", 0)), 5)
 
-        st.subheader("💭 How you feel")
-        c6, c7 = st.columns(2)
-        stress = c6.slider("Stress (1 = calm, 5 = very stressed)", 1, 5, int(existing.get("stress", 2)))
-        energy = c7.slider("Energy (1 = exhausted, 5 = great)", 1, 5, int(existing.get("energy", 3)))
-        moods = ["😊 Good", "🙂 Okay", "😐 Meh", "😔 Low", "😣 Frustrated"]
-        mood = st.radio("Mood", moods, index=moods.index(existing["mood"]) if existing.get("mood") in moods else 1, horizontal=True)
-        notes = st.text_area("Anything else? (cravings, period, how you're feeling...)", existing.get("notes", ""))
-        period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
+        with st.container(border=True, key="ck_feel"):
+            ui.card_header("💭", "How you feel", "There are no wrong answers here", tint="#FCE8F3")
+            c6, c7 = st.columns(2)
+            stress = c6.slider("Stress  ·  1 = calm, 5 = very stressed", 1, 5, int(existing.get("stress", 2)))
+            energy = c7.slider("Energy  ·  1 = exhausted, 5 = great", 1, 5, int(existing.get("energy", 3)))
+            moods = ["😊 Good", "🙂 Okay", "😐 Meh", "😔 Low", "😣 Frustrated"]
+            mood = st.radio("Mood", moods, index=moods.index(existing["mood"]) if existing.get("mood") in moods else 1, horizontal=True)
+            c8, c9 = st.columns([3, 1])
+            notes = c8.text_area("Anything else? (cravings, period, how you're feeling...)", existing.get("notes", ""), height=110)
+            with c9:
+                weight_kg = st.number_input(
+                    "Weight (kg, optional)", 0.0, 300.0, float(prefill("weight_kg", "weight_kg", 0.0)), 0.1,
+                    help="Optional. Once a week is plenty. Daily weight goes up and down with water, periods and salt.",
+                )
+                period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
 
         submitted = st.form_submit_button("Save & get my coach's feedback ✨", type="primary")
 
