@@ -40,11 +40,12 @@ CSS = """
 }
 /* Bigger text everywhere (no more zooming), and content centred at a comfortable width */
 /* Text and layout grow with the screen, so big / high-resolution monitors aren't tiny */
-html { font-size: clamp(17px, 1.05vw, 30px); }
+html { font-size: clamp(18px, 1.3vw, 36px); }
 .stApp { overflow-x: hidden; }
 .block-container { padding-top: 2.2rem; padding-left: 3rem; padding-right: 3rem;
                    max-width: 100% !important; margin: 0 auto; }
-section[data-testid="stSidebar"] { min-width: 15rem !important; }
+section[data-testid="stSidebar"] { min-width: 17rem !important; }
+section[data-testid="stSidebar"] label p { font-size: 1.05rem !important; }
 section[data-testid="stSidebar"] * { font-size: 1rem; }
 .stApp p, .stApp label, .stApp li, .stApp input, .stApp textarea, .stApp button { font-size: 1rem !important; }
 h1 { font-size: 2.1rem !important; } h2 { font-size: 1.6rem !important; } h3 { font-size: 1.3rem !important; }
@@ -436,3 +437,104 @@ def meal_row(meal: dict) -> str:
     return (f'<div class="meal"><div class="i">{MEAL_ICONS.get(meal.get("meal"), "🍽️")}</div>'
             f'<div class="m"><b>{html.escape(str(meal.get("meal", "Meal")))}</b><div>{foods}</div></div>'
             f'<div class="kc">{int(meal.get("calories", 0))} kcal</div></div>')
+
+
+# ---------- Tulsi the mascot: bounces in the corner, smiles when you click her ----------
+
+MASCOT_SVG = """<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg">
+  <ellipse class="t-shadow" cx="60" cy="124" rx="30" ry="5" fill="#2A2140" opacity=".12"/>
+  <g class="t-body">
+    <path d="M60 52 C60 42 60 36 60 30" stroke="#2F8F5B" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <path d="M60 36 C46 20 26 24 24 36 C38 46 52 44 60 36Z" fill="#5CC08A"/>
+    <g class="t-wave"><path d="M60 32 C72 14 94 16 97 29 C84 41 68 40 60 32Z" fill="#3FAE74"/></g>
+    <ellipse cx="60" cy="84" rx="38" ry="34" fill="#6CCB94"/>
+    <ellipse cx="60" cy="92" rx="28" ry="20" fill="#86D8A8" opacity=".55"/>
+    <g class="t-normal">
+      <circle cx="47" cy="78" r="5" fill="#1E3B2C"/><circle cx="73" cy="78" r="5" fill="#1E3B2C"/>
+      <circle cx="48.8" cy="76.2" r="1.7" fill="#fff"/><circle cx="74.8" cy="76.2" r="1.7" fill="#fff"/>
+      <ellipse cx="37" cy="90" rx="6.5" ry="3.8" fill="#F59AA6" opacity=".8"/>
+      <ellipse cx="83" cy="90" rx="6.5" ry="3.8" fill="#F59AA6" opacity=".8"/>
+      <path d="M52 91 Q60 98 68 91" stroke="#1E3B2C" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </g>
+    <g class="t-happy">
+      <path d="M41 80 Q47 72 53 80" stroke="#1E3B2C" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+      <path d="M67 80 Q73 72 79 80" stroke="#1E3B2C" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+      <ellipse cx="36" cy="90" rx="8" ry="4.8" fill="#F27E93"/>
+      <ellipse cx="84" cy="90" rx="8" ry="4.8" fill="#F27E93"/>
+      <path d="M48 89 Q60 89 72 89 Q70 106 60 106 Q50 106 48 89Z" fill="#1E3B2C"/>
+      <path d="M53 99 Q60 95 67 99 Q64 105 60 105 Q56 105 53 99Z" fill="#F59AA6"/>
+    </g>
+  </g>
+</svg>"""
+
+MASCOT_CSS = """
+#tulsi-mascot { position: fixed; right: 1.6rem; bottom: 1.4rem; z-index: 9999; width: 7.5rem;
+                cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+#tulsi-mascot svg { width: 100%; height: auto; display: block; overflow: visible; }
+#tulsi-mascot .t-body { transform-origin: 60px 118px; animation: t-jump 2.2s ease-in-out infinite; }
+#tulsi-mascot .t-shadow { transform-origin: 60px 124px; animation: t-shadow 2.2s ease-in-out infinite; }
+#tulsi-mascot .t-wave { transform-origin: 60px 33px; animation: t-wave 1.1s ease-in-out infinite; }
+#tulsi-mascot .t-happy { display: none; }
+#tulsi-mascot.happy .t-normal { display: none; }
+#tulsi-mascot.happy .t-happy { display: inline; }
+#tulsi-mascot.happy .t-body { animation: t-joy .6s ease-in-out 2; }
+#tulsi-mascot .t-bubble { position: absolute; right: 85%; bottom: 78%; white-space: nowrap; background: #FFFFFF;
+  color: #2A2140; font: 600 1rem/1.3 "Source Sans Pro", sans-serif; padding: .55rem .9rem; border-radius: 1rem 1rem .25rem 1rem;
+  box-shadow: 0 6px 20px rgba(78,42,132,.18); border: 1px solid #E6DDF3; animation: t-pop .5s cubic-bezier(.2,.9,.3,1.3) both; }
+#tulsi-mascot .t-heart { position: absolute; font-size: 1.3rem; bottom: 70%; opacity: 0; pointer-events: none; }
+#tulsi-mascot.happy .t-heart { animation: t-float 1.4s ease-out forwards; }
+#tulsi-mascot .t-heart:nth-of-type(1) { left: 10%; animation-delay: 0s; }
+#tulsi-mascot .t-heart:nth-of-type(2) { left: 45%; animation-delay: .15s; }
+#tulsi-mascot .t-heart:nth-of-type(3) { left: 75%; animation-delay: .3s; }
+@keyframes t-jump { 0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
+  8% { transform: translateY(0) scale(1.08, .9); } 25% { transform: translateY(-26px) scale(.95, 1.06); }
+  42% { transform: translateY(0) scale(1.07, .93); } 50% { transform: translateY(0) scale(1, 1); } }
+@keyframes t-shadow { 0%, 60%, 100% { transform: scale(1); opacity: .12; } 25% { transform: scale(.65); opacity: .06; } }
+@keyframes t-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-22deg); } }
+@keyframes t-joy { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-14px) rotate(-6deg); }
+  75% { transform: translateY(-14px) rotate(6deg); } }
+@keyframes t-pop { 0% { opacity: 0; transform: translateY(8px) scale(.85); } 100% { opacity: 1; transform: none; } }
+@keyframes t-float { 0% { opacity: 0; transform: translateY(0) scale(.6); } 20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.2); } }
+"""
+
+
+def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
+    """Puts Tulsi in the corner of the page. She bounces and waves; click her and she smiles.
+    lift=True raises her a little (on the chat page, so she doesn't cover the message bar)."""
+    import json
+    import streamlit.components.v1 as components
+    hello = f"Hi {name}! 👋" if name else "Hi there! 👋"
+    cheers = ["Yay, you found me! 🌸", "You've got this! 💜", "Proud of you! 🌿", "Sip some water? 💧",
+              "One step at a time 🌱", "You're doing amazing ✨", "Hehe, that tickles! 😄"]
+    components.html(
+        f"""<script>
+        const d = window.parent.document;
+        if (!d.getElementById('tulsi-mascot-style')) {{
+          const s = d.createElement('style'); s.id = 'tulsi-mascot-style'; s.textContent = {json.dumps(MASCOT_CSS)};
+          d.head.appendChild(s);
+        }}
+        let m = d.getElementById('tulsi-mascot');
+        if (!m) {{
+          m = d.createElement('div'); m.id = 'tulsi-mascot'; m.title = 'Click me!';
+          m.innerHTML = '<div class="t-bubble"></div><span class="t-heart">💜</span><span class="t-heart">🌸</span>'
+                      + '<span class="t-heart">💜</span>' + {json.dumps(MASCOT_SVG)};
+          d.body.appendChild(m);
+          m.addEventListener('click', () => {{
+            const cheers = JSON.parse(m.dataset.cheers || '[]');
+            const b = m.querySelector('.t-bubble');
+            m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');
+            b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';
+            b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+            clearTimeout(m._t);
+            m._t = setTimeout(() => {{ m.classList.remove('happy'); b.textContent = m.dataset.hello; }}, 3000);
+          }});
+        }}
+        m.dataset.hello = {json.dumps(hello)};
+        m.dataset.cheers = {json.dumps(json.dumps(cheers))};
+        if (!m.classList.contains('happy')) m.querySelector('.t-bubble').textContent = m.dataset.hello;
+        m.style.display = {json.dumps("block" if show else "none")};
+        m.style.bottom = {json.dumps("7.5rem" if lift else "1.4rem")};
+        </script>""",
+        height=0,
+    )

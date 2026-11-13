@@ -36,6 +36,7 @@ page = st.sidebar.radio(
     "Go to", ["🏠 Today", "💬 Chat with Tulsi", "🌸 My garden", "📸 Food scan", "📊 Progress", "🩺 Health profile"],
     label_visibility="collapsed",
 )
+show_tulsi = st.sidebar.toggle("🌿 Tulsi on screen", value=True, key="show_tulsi")
 st.sidebar.divider()
 st.sidebar.caption(
     "FitBuddy gives general wellness support, not medical advice. "
@@ -43,6 +44,9 @@ st.sidebar.caption(
 )
 
 profile = storage.load_profile()
+
+# Tulsi the mascot, bouncing in the corner (click her and she smiles)
+ui.mascot(profile.get("name", ""), show=show_tulsi, lift=page == "💬 Chat with Tulsi")
 
 # Tulsi in the sidebar, and a celebration whenever a new badge is earned
 _rows = journey.all_days()
