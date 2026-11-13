@@ -6,6 +6,18 @@ It's built for people with PCOS and anyone who has faced body-shaming.
 I built it from my own experience: I went from 80 kg to 63 kg in a year using AI as my coach,
 and my cycle became regular again.
 
+   ## Screenshots
+
+   | Home | Daily check-in |
+   |---|---|
+   | ![Home](screenshots/home.png) | ![Check-in](screenshots/checkin.png) |
+
+   | Chat with Tulsi | Food scan |
+   |---|---|
+   | ![Chat](screenshots/chat.png) | ![Food scan](screenshots/food-scan.png) |
+
+   ![My garden](screenshots/garden.png)
+
 ## Features (so far)
 - **Health profile**: conditions (e.g. PCOS), medications, cycle, diet, goals and limitations.
 - **Medical report upload**: the AI summarises key findings from a PDF report, and you check them before saving.
