@@ -419,16 +419,21 @@ MEAL_ICONS = {"Breakfast": "🌅", "Lunch": "☀️", "Snack": "🍎", "Dinner":
 
 
 def food_cards(items: list[dict]) -> str:
+    """One card per food. Items can carry "servings" (shown if not 1) and "warn" (a sanity-check message)."""
     cells = []
     for i in items:
+        servings = float(i.get("servings") or 1)
+        serving_note = f' <span style="font-size:.8rem;color:#786E8C">× {servings:g} serving</span>' if servings != 1 else ""
+        warning = (f'<div style="margin-top:.5rem;font-size:.8rem;color:#8A4B0F">⚠️ {html.escape(i["warn"])}</div>'
+                   if i.get("warn") else "")
         cells.append(
             f'<div class="food"><div class="n">{html.escape(str(i.get("name", "")))}</div>'
             f'<div class="p">{html.escape(str(i.get("portion", "")))}</div>'
-            f'<div class="k">{int(float(i.get("calories") or 0))} kcal</div><div class="chips">'
+            f'<div class="k">{int(float(i.get("calories") or 0))} kcal{serving_note}</div><div class="chips">'
             f'<span class="chip">Protein {float(i.get("protein_g") or 0):g}g</span>'
             f'<span class="chip c">Carbs {float(i.get("carbs_g") or 0):g}g</span>'
             f'<span class="chip f">Fat {float(i.get("fat_g") or 0):g}g</span>'
-            f'<span class="chip fi">Fibre {float(i.get("fibre_g") or 0):g}g</span></div></div>')
+            f'<span class="chip fi">Fibre {float(i.get("fibre_g") or 0):g}g</span></div>{warning}</div>')
     return f'<div class="foods">{"".join(cells)}</div>'
 
 
@@ -538,3 +543,158 @@ def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
         </script>""",
         height=0,
     )
+
+
+# ---------- More breathing room between everything ----------
+
+SPACING_CSS = """
+<style>
+.block-container [data-testid="stVerticalBlock"] { gap: 1.3rem; }
+.block-container [data-testid="stHorizontalBlock"] { gap: 1.6rem; }
+.hero { margin-bottom: 1.8rem !important; }
+.section-label { margin: 1.6rem 0 .6rem !important; }
+.fb-card, .tile, .chart-card, .food, .meal { margin-bottom: .4rem; }
+div[data-testid="stForm"] { padding: 1.4rem 1.6rem !important; }
+div[data-testid="stExpander"] details { padding: .3rem .4rem; }
+.soft-panel { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:20px; padding:1.3rem 1.5rem; }
+.soft-panel h3 { margin-top:0 !important; }
+</style>
+"""
+
+
+def inject_spacing_css() -> None:
+    st.markdown(SPACING_CSS, unsafe_allow_html=True)
+
+
+def section(title: str, subtitle: str = "") -> None:
+    """A clear section heading with space above it."""
+    sub = f'<div style="color:var(--muted);font-size:.92rem;margin-top:.2rem">{subtitle}</div>' if subtitle else ""
+    st.markdown(f'<div style="margin:1.8rem 0 .5rem"><div style="font-size:1.35rem;font-weight:800;color:var(--ink)">'
+                f'{title}</div>{sub}</div>', unsafe_allow_html=True)
+
+
+# ---------- Home page: Tulsi under a rainbow ----------
+
+HOME_CSS = """
+<style>
+.home { position:relative; text-align:center; padding: 1rem 0 0; }
+.home .sky { position:relative; width:min(46rem, 92%); margin:0 auto; }
+.home .sky svg { width:100%; height:auto; display:block; overflow:visible; }
+.home .arc { fill:none; stroke-linecap:round; stroke-dasharray: 1000; stroke-dashoffset: 1000;
+             animation: draw-arc 1.6s ease-out forwards; }
+.home .cloud { animation: drift 6s ease-in-out infinite alternate; }
+.home .tulsi { position:absolute; left:50%; bottom:2%; width:30%; transform:translateX(-50%); }
+.home .tulsi .t-body { transform-origin: 60px 118px; animation: home-jump 2.2s ease-in-out infinite; }
+.home .tulsi .t-shadow { transform-origin: 60px 124px; animation: home-shadow 2.2s ease-in-out infinite; }
+.home .tulsi .t-wave { transform-origin: 60px 33px; animation: home-wave 1.1s ease-in-out infinite; }
+.home .tulsi .t-happy { display:none; }
+.home h1 { font-size: 2.6rem !important; color: var(--ink) !important; margin: 1.2rem 0 .2rem !important;
+           animation: rise .8s .9s both; }
+.home p.lead { font-size: 1.15rem !important; color: var(--muted) !important; animation: rise .8s 1.1s both; }
+.home .chips { display:flex; justify-content:center; gap:.8rem; flex-wrap:wrap; margin: 1rem 0 .4rem; animation: rise .8s 1.3s both; }
+.home .chips span { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:99px; padding:.45rem 1rem; font-weight:600; color:#4E2A84; }
+@keyframes draw-arc { to { stroke-dashoffset: 0; } }
+@keyframes drift { from { transform: translateX(-8px); } to { transform: translateX(8px); } }
+@keyframes rise { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
+@keyframes home-jump { 0%, 60%, 100% { transform: translateY(0) scale(1,1); } 8% { transform: translateY(0) scale(1.08,.9); }
+  25% { transform: translateY(-24px) scale(.95,1.06); } 42% { transform: translateY(0) scale(1.07,.93); } 50% { transform: translateY(0); } }
+@keyframes home-shadow { 0%, 60%, 100% { transform: scale(1); opacity:.12; } 25% { transform: scale(.65); opacity:.06; } }
+@keyframes home-wave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-22deg); } }
+.st-key-letsgo { display:flex; justify-content:center; }
+.st-key-letsgo button { font-size: 1.25rem !important; padding: .8rem 2.6rem !important; border-radius: 999px !important;
+                        background: linear-gradient(135deg, #7B3FBF, #C38BEA) !important; border: none !important; color: #fff !important;
+                        box-shadow: 0 10px 28px rgba(123,63,191,.35); animation: rise .8s 1.5s both; }
+.st-key-letsgo button p { font-size: 1.25rem !important; color:#fff !important; font-weight:700; }
+</style>
+"""
+
+RAINBOW_COLORS = ["#F28B82", "#F7B267", "#F9DC5C", "#8BD3A0", "#7CC4F5", "#9B8CF0", "#C38BEA"]
+
+
+def home_html(name: str, chips: list[str]) -> str:
+    arcs = "".join(
+        f'<path class="arc" d="M{60 + i * 16} 300 A{240 - i * 16} {240 - i * 16} 0 0 1 {540 - i * 16} 300" '
+        f'stroke="{c}" stroke-width="15" style="animation-delay:{i * 0.12:.2f}s"/>'
+        for i, c in enumerate(RAINBOW_COLORS))
+    cloud = lambda x, y, s: (f'<g transform="translate({x} {y}) scale({s})"><g class="cloud" fill="#FFFFFF">'
+                             '<ellipse cx="0" cy="0" rx="46" ry="26"/><ellipse cx="34" cy="-14" rx="34" ry="26"/>'
+                             '<ellipse cx="-34" cy="-8" rx="30" ry="22"/><ellipse cx="62" cy="4" rx="28" ry="18"/></g></g>')
+    sparkles = "".join(f'<text x="{x}" y="{y}" font-size="{s}" opacity=".9">✨</text>'
+                       for x, y, s in [(110, 70, 22), (470, 60, 18), (300, 30, 16), (520, 170, 14)])
+    sky = (f'<svg viewBox="0 0 600 330" xmlns="http://www.w3.org/2000/svg">{arcs}'
+           f'{cloud(75, 300, 1.05)}{cloud(525, 300, 1.05)}{sparkles}</svg>')
+    who = html.escape(name) if name else "there"
+    chip_html = "".join(f"<span>{html.escape(c)}</span>" for c in chips)
+    return (f'{HOME_CSS}<div class="home"><div class="sky">{sky}<div class="tulsi">{MASCOT_SVG}</div></div>'
+            f'<h1>Hi {who}! Let\'s start 🌈</h1>'
+            f'<p class="lead">I\'m Tulsi, and I\'m so happy to see you. Every small step counts today.</p>'
+            f'<div class="chips">{chip_html}</div></div>')
+
+
+# ---------- Symptoms: a 30-day grid and a by-phase grid ----------
+
+def heat_grid_svg(row_labels: list[str], col_labels: list[str], values: list[list[float | None]],
+                  max_value: float = 3.0, cell: int = 26, label_w: int = 110, col_every: int = 1) -> str:
+    """Rows x columns of rounded squares; darker purple = stronger. None = not logged (dotted)."""
+    lines = max(len(lab.split("|")) for lab in col_labels)  # "Period|5 days" = two lines
+    top = 28 + 13 * (lines - 1)
+    W = label_w + len(col_labels) * cell + 10
+    H = top + len(row_labels) * cell + 10
+    out = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" '
+           f'style="width:100%;max-width:{W * 1.6:.0f}px;height:auto;display:block">']
+    for j, lab in enumerate(col_labels):
+        if j % col_every == 0:
+            spans = "".join(f'<tspan x="{label_w + j * cell + cell / 2}" dy="{0 if k == 0 else 13}">{html.escape(part)}</tspan>'
+                            for k, part in enumerate(lab.split("|")))
+            out.append(f'<text y="16" text-anchor="middle" font-size="10" fill="#9A90AE">{spans}</text>')
+    for i, lab in enumerate(row_labels):
+        y = top + i * cell
+        out.append(f'<text x="{label_w - 10}" y="{y + cell / 2 + 4}" text-anchor="end" font-size="12" fill="#4E2A84">{html.escape(lab)}</text>')
+        for j, v in enumerate(values[i]):
+            x = label_w + j * cell
+            if v is None:
+                out.append(f'<rect x="{x + 3}" y="{y + 3}" width="{cell - 6}" height="{cell - 6}" rx="6" fill="none" stroke="#E6DDF3" stroke-dasharray="2 2"/>')
+                continue
+            t = max(0.0, min(1.0, v / max_value))
+            r, g, b = (int(241 + (123 - 241) * t), int(234 + (63 - 234) * t), int(251 + (191 - 251) * t))
+            out.append(f'<rect x="{x + 3}" y="{y + 3}" width="{cell - 6}" height="{cell - 6}" rx="6" fill="rgb({r},{g},{b})">'
+                       f'<title>{html.escape(lab)} · {html.escape(col_labels[j])}: {v:.1f}</title></rect>')
+    out.append("</svg>")
+    return "".join(out)
+
+
+def bars_html(counts: dict, total: int | None = None) -> str:
+    """Simple horizontal bars for small counts (e.g. cravings by time of day)."""
+    if not counts:
+        return ""
+    top = max(counts.values()) or 1
+    rows = "".join(
+        f'<div style="display:flex;align-items:center;gap:.8rem;margin:.45rem 0">'
+        f'<div style="width:9.5rem;color:var(--ink)">{html.escape(str(k))}</div>'
+        f'<div style="flex:1;background:#F1EAFB;border-radius:99px;height:.8rem">'
+        f'<div style="width:{v / top * 100:.0f}%;height:100%;border-radius:99px;background:linear-gradient(90deg,#9B6BD6,#E58FC7)"></div></div>'
+        f'<div style="width:2.5rem;text-align:right;font-weight:700;color:#4E2A84">{v}</div></div>'
+        for k, v in sorted(counts.items(), key=lambda kv: -kv[1]))
+    return f'<div class="soft-panel">{rows}</div>'
+
+
+# ---------- Craving SOS: breathe with Tulsi ----------
+
+BREATHE_HTML = """
+<style>
+.breathe { display:flex; flex-direction:column; align-items:center; gap:1rem; padding: 1.4rem 0; }
+.breathe .ball { width: 9rem; height: 9rem; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #E9DCFA, #9B6BD6); box-shadow: 0 0 0 0 rgba(155,107,214,.35);
+  animation: breathe 8s ease-in-out infinite; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; }
+.breathe .ball { position: relative; }
+.breathe .ball b { position:absolute; animation: say-in 8s steps(1) infinite; }
+.breathe .ball b.out { animation-name: say-out; }
+@keyframes breathe { 0%, 100% { transform: scale(.7); box-shadow: 0 0 0 0 rgba(155,107,214,.35); }
+                     50% { transform: scale(1.1); box-shadow: 0 0 0 1.6rem rgba(155,107,214,0); } }
+@keyframes say-in { 0% { opacity:1; } 50% { opacity:0; } }
+@keyframes say-out { 0% { opacity:0; } 50% { opacity:1; } }
+</style>
+<div class="breathe"><div class="ball"><b class="in">Breathe in</b><b class="out">Breathe out</b></div>
+<div style="color:var(--muted);text-align:center;max-width:22rem">Breathe with the circle for one minute.
+Cravings rise and fall like a wave, so you don't have to act on this one straight away.</div></div>
+"""

@@ -271,3 +271,42 @@ def load_challenge() -> dict:
 
 def save_challenge(data: dict) -> None:
     _write(CHALLENGE_FILE, data)
+
+
+# ---------- PCOS symptoms (their own log) ----------
+# {"2026-11-13": {"acne": 1, "bloating": 2, "note": "..."}}
+
+SYMPTOMS_FILE = DATA_DIR / "symptoms.json"
+
+
+def load_symptoms() -> dict:
+    return _read(SYMPTOMS_FILE, {})
+
+
+def save_symptoms(day: str, entry: dict) -> None:
+    data = load_symptoms()
+    data[day] = entry
+    _write(SYMPTOMS_FILE, data)
+
+
+# ---------- Cravings log ----------
+# [{"when": "2026-11-13T22:10", "kind": "...", "strength": 4, "trigger": "...", "note": "", "outcome": None}]
+
+CRAVINGS_FILE = DATA_DIR / "cravings.json"
+
+
+def load_cravings() -> list[dict]:
+    return _read(CRAVINGS_FILE, [])
+
+
+def add_craving(entry: dict) -> None:
+    data = load_cravings()
+    data.append(entry)
+    _write(CRAVINGS_FILE, data)
+
+
+def set_craving_outcome(index: int, outcome: str) -> None:
+    data = load_cravings()
+    if 0 <= index < len(data):
+        data[index]["outcome"] = outcome
+        _write(CRAVINGS_FILE, data)

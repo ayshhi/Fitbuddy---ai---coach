@@ -92,20 +92,44 @@ def my_progress() -> dict | None:
 
 # ---------------- Friend codes ----------------
 
+def _checksum(payload: str) -> str:
+    """4 characters that change if any part of the code is mistyped or edited."""
+    import hashlib
+    return hashlib.sha1(payload.encode()).hexdigest()[:4].upper()
+
+
 def make_code(name: str, prog: dict) -> str:
     data = {"n": name[:20], "p": prog["pos"], "k": prog["km"], "l": prog["length"], "s": prog["start"],
             "t": date.today().isoformat()}
-    return "TULSI-" + base64.urlsafe_b64encode(json.dumps(data, separators=(",", ":")).encode()).decode().rstrip("=")
+    payload = base64.urlsafe_b64encode(json.dumps(data, separators=(",", ":")).encode()).decode().rstrip("=")
+    return f"TULSI-{payload}-{_checksum(payload)}"
 
 
 def read_code(code: str) -> dict:
-    code = code.strip()
+    code = "".join(code.split())  # ignore spaces or line breaks added when copying from WhatsApp
     if not code.upper().startswith("TULSI-"):
         raise ValueError("A friend code starts with TULSI-")
-    raw = code[6:]
-    data = json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)).decode())
+    body = code[6:]
+    payload, _, check = body.rpartition("-")
+    if not payload or _checksum(payload) != check.upper():
+        raise ValueError("This code seems incomplete or mistyped. Ask your friend to send it again.")
+    data = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)).decode())
     return {"name": str(data["n"])[:20], "pos": int(data["p"]), "km": float(data["k"]),
             "updated": str(data.get("t", "")), "manual": False}
+
+
+def days_old(friend: dict) -> int | None:
+    try:
+        return (date.today() - date.fromisoformat(friend.get("updated", ""))).days
+    except ValueError:
+        return None
+
+
+def whatsapp_link(name: str, code: str) -> str:
+    from urllib.parse import quote
+    text = (f"{name} is walking Tulsi's Garden Path 🌿 Join me! Paste my friend code into FitBuddy's "
+            f"Walk challenge page:\n{code}")
+    return "https://wa.me/?text=" + quote(text)
 
 
 def save_friend(friend: dict) -> None:

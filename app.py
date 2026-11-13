@@ -4,7 +4,7 @@ app.py - the FitBuddy app you see in the browser (built with Streamlit).
 Run it with:   streamlit run app.py
 """
 
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import streamlit as st
 from pypdf import PdfReader
@@ -25,6 +25,7 @@ st.set_page_config(page_title="FitBuddy - AI Health Coach", page_icon="🌿", la
 ui.inject_css()
 ui.inject_card_css()
 ui.inject_page_css()
+ui.inject_spacing_css()
 
 
 def show_error(err: Exception) -> None:
@@ -34,8 +35,8 @@ def show_error(err: Exception) -> None:
 # ---------------- Sidebar navigation ----------------
 
 ui.sidebar_brand()
-PAGES = ["🏠 Today", "💬 Chat with Tulsi", "🌸 My garden", "🎲 Walk challenge", "📸 Food scan", "📊 Progress",
-         "🩺 Health profile"]
+PAGES = ["🌈 Home", "🏠 Today", "💬 Chat with Tulsi", "📸 Food scan", "🆘 Craving SOS", "🌡️ Symptoms",
+         "🌸 My garden", "🎲 Walk challenge", "📊 Progress", "🩺 Health profile"]
 page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
 
 
@@ -44,6 +45,10 @@ def go_to_chat(message: str, **extra) -> None:
     st.session_state.nav = "💬 Chat with Tulsi"
     st.session_state.pending = message
     st.session_state.update(extra)
+
+
+def go_to(target: str) -> None:
+    st.session_state.nav = target
 
 
 def water_tulsi(day: str) -> None:
@@ -59,7 +64,7 @@ st.sidebar.caption(
 profile = storage.load_profile()
 
 # Tulsi the mascot, bouncing in the corner (click her and she smiles)
-ui.mascot(profile.get("name", ""), show=show_tulsi, lift=page == "💬 Chat with Tulsi")
+ui.mascot(profile.get("name", ""), show=show_tulsi and page != "🌈 Home", lift=page == "💬 Chat with Tulsi")
 
 # Tulsi in the sidebar, and a celebration whenever a new badge is earned
 _rows = journey.all_days()
@@ -78,9 +83,25 @@ if _new or _first_time:
     storage.save_seen_badges([b["name"] for b in _earned])
 
 
+# ---------------- Page: Home (Tulsi under a rainbow) ----------------
+
+if page == "🌈 Home":
+    today_str = date.today().isoformat()
+    checked = {d for d, r in _rows.items() if r.get("checked_in")}
+    streak = journey._streak(checked, date.today())
+    chips = [f"{_growth['emoji']} Tulsi is a {_growth['name'].lower()}",
+             f"💧 {storage.water_today(today_str)} / 8 glasses today",
+             "✅ Checked in today" if today_str in checked else "📝 Not checked in yet"]
+    if streak >= 2:
+        chips.append(f"🔥 {streak}-day best streak")
+    st.markdown(ui.home_html(profile.get("name", ""), chips), unsafe_allow_html=True)
+    with st.container(key="letsgo"):
+        st.button("Let's start ✨", on_click=go_to, args=("🏠 Today",))
+
+
 # ---------------- Page 1: Today's check-in ----------------
 
-if page == "🏠 Today":
+elif page == "🏠 Today":
     name = profile.get("name") or "there"
     ui.hero("👋", f"Hi {name}!", date.today().strftime("%A, %d %B") + " · Let's check in on today")
     st.markdown(ui.chat_window(
@@ -117,11 +138,9 @@ if page == "🏠 Today":
             storage.set_water(today_str, glasses - 1)
             st.rerun()
 
-        with st.expander("🆘 Craving SOS: having a craving right now?"):
-            kind = st.radio("What are you craving?", coach.CRAVINGS, horizontal=True, key="crave_kind")
-            note = st.text_input("Anything else? (optional)", key="crave_note", placeholder="e.g. it's 10 pm and I want chocolate")
-            st.button("Help me, Tulsi 💜", type="primary", on_click=go_to_chat,
-                      args=(f"🆘 Craving SOS: {kind}",), kwargs={"craving": (kind, note)})
+        q1, q2 = st.columns(2)
+        q1.button("🆘 Having a craving?", key="to_crave", on_click=go_to, args=("🆘 Craving SOS",))
+        q2.button("🌡️ Log PCOS symptoms", key="to_sym", on_click=go_to, args=("🌡️ Symptoms",))
 
     if not profile:
         st.info("Tip: fill in your **🩺 Health profile** first so your coach can personalise advice.")
@@ -168,13 +187,6 @@ if page == "🏠 Today":
         mood = st.radio("Mood", moods, index=moods.index(existing["mood"]) if existing.get("mood") in moods else 1, horizontal=True)
         notes = st.text_area("Anything else? (cravings, period, how you're feeling...)", existing.get("notes", ""))
         period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
-        st.markdown("**🌡️ PCOS symptoms today** (optional, helps Tulsi spot patterns)")
-        old_sym = existing.get("symptoms", {})
-        sym_cols = st.columns(4)
-        symptoms = {}
-        for i, (key, label) in enumerate(journey.SYMPTOMS.items()):
-            symptoms[key] = journey.LEVELS.index(sym_cols[i % 4].select_slider(
-                label, journey.LEVELS, value=journey.LEVELS[int(old_sym.get(key, 0))], key=f"sym_{key}"))
 
         submitted = st.form_submit_button("Save & get my coach's feedback ✨", type="primary")
 
@@ -186,7 +198,6 @@ if page == "🏠 Today":
             "calories": calories, "exercise": exercise, "exercise_minutes": exercise_minutes,
             "stress": stress, "energy": energy, "mood": mood, "notes": notes,
             "foods": storage.day_foods(day), "weight_kg": weight_kg or None,
-            "symptoms": {k: v for k, v in symptoms.items() if v} or None,
         })
         st.success("Check-in saved! 🎉")
 
@@ -234,6 +245,131 @@ if page == "🏠 Today":
 
 
 # ---------------- Page: Food scan ----------------
+
+elif page == "🆘 Craving SOS":
+    ui.hero("🆘", "Craving SOS", "Cravings are normal, especially with PCOS. Let's ride this one out together 💜")
+    left, right = st.columns([3, 2])
+    with left:
+        with st.form("craving"):
+            kind = st.radio("What are you craving?", list(journey.SWAPS), horizontal=True)
+            strength = st.slider("How strong is it? (1 = a little, 5 = very strong)", 1, 5, 3)
+            trigger = st.radio("What might be behind it?", journey.TRIGGERS, horizontal=True, index=len(journey.TRIGGERS) - 1)
+            note = st.text_input("Anything else? (optional)", placeholder="e.g. long day at work, it's 10 pm")
+            if st.form_submit_button("Log it and help me 💜", type="primary"):
+                storage.add_craving({"when": datetime.now().strftime("%Y-%m-%dT%H:%M"), "kind": kind,
+                                     "strength": strength, "trigger": trigger, "note": note, "outcome": None})
+                st.session_state.last_craving = (kind, f"{trigger}, strength {strength}/5. {note}".strip())
+    with right:
+        st.markdown(ui.BREATHE_HTML, unsafe_allow_html=True)
+
+    if st.session_state.get("last_craving"):
+        kind, details = st.session_state.last_craving
+        ui.section("Try one of these instead", "Quick swaps that need no shopping trip. Pick whatever feels doable.")
+        swap_cards = "".join(f'<div class="food"><div class="n">{ui.html.escape(x)}</div></div>' for x in journey.SWAPS[kind])
+        st.markdown(f'<div class="foods">{swap_cards}</div>', unsafe_allow_html=True)
+        st.button("💬 Talk it through with Tulsi", type="primary", on_click=go_to_chat,
+                  args=(f"🆘 Craving SOS: {kind}",), kwargs={"craving": (kind, details)})
+
+    cravings = storage.load_cravings()
+    open_ones = [i for i, c in enumerate(cravings) if not c.get("outcome")]
+    if open_ones:
+        i = open_ones[-1]
+        c = cravings[i]
+        ui.section("How did it go?", f"Your {c['kind'].split(' ', 1)[1].lower()} craving from "
+                   f"{datetime.fromisoformat(c['when']).strftime('%d %b, %I:%M %p')}. Every answer is a good answer.")
+        cols = st.columns(3)
+        for col, (key, label) in zip(cols, journey.OUTCOMES.items()):
+            if col.button(label, key=f"out_{key}"):
+                storage.set_craving_outcome(i, key)
+                st.toast({"mindful": "Enjoying food mindfully is a win 💜", "swap": "Nice swap! 🥗",
+                          "passed": "You rode the wave 🌊"}[key])
+                st.rerun()
+
+    pat = journey.craving_patterns()
+    if pat and pat["total"] >= 3:
+        ui.section("Your craving patterns", "Knowing when cravings come makes them easier to plan for.")
+        outcomes = pat["outcomes"]
+        handled = sum(outcomes.values())
+        st.markdown(ui.tiles([
+            ("🍬 CRAVINGS LOGGED", str(pat["total"]), "so far"),
+            ("🕐 MOST OFTEN", pat["times"].most_common(1)[0][0], "time of day"),
+            ("🔎 TOP TRIGGER", pat["triggers"].most_common(1)[0][0], "what's often behind it"),
+            ("🌊 PASSED OR SWAPPED", f"{(outcomes['passed'] + outcomes['swap']) / handled:.0%}" if handled else "–",
+             "of cravings you followed up"),
+        ]), unsafe_allow_html=True)
+        a, b = st.columns(2)
+        with a:
+            st.markdown("**By time of day**")
+            st.markdown(ui.bars_html(dict(pat["times"])), unsafe_allow_html=True)
+        with b:
+            st.markdown("**By trigger**")
+            st.markdown(ui.bars_html(dict(pat["triggers"])), unsafe_allow_html=True)
+        phases = {k: v for k, v in pat["phases"].items() if k != "Unknown"}
+        if phases:
+            st.markdown("**By cycle phase**")
+            st.markdown(ui.bars_html(phases), unsafe_allow_html=True)
+            st.caption("Many people with PCOS crave more in the luteal phase (the week or so before a period). "
+                       "If that's you too, it's your hormones, not a lack of willpower.")
+    elif pat:
+        st.caption(f"You've logged {pat['total']} craving(s). After 3, Tulsi starts showing your patterns here.")
+
+
+elif page == "🌡️ Symptoms":
+    ui.hero("🌡️", "PCOS symptoms", "Log how your body feels. Over time, Tulsi finds what makes symptoms better or worse")
+    day = st.date_input("Date", value=date.today(), max_value=date.today(), key="sym_day").isoformat()
+    old = storage.load_symptoms().get(day, {})
+    with st.form("symptoms"):
+        st.markdown("**How strong was each symptom today?**")
+        levels = {}
+        keys = list(journey.SYMPTOMS.items())
+        for row in (keys[:4], keys[4:]):
+            cols = st.columns(4)
+            for col, (key, label) in zip(cols, row):
+                levels[key] = journey.LEVELS.index(col.select_slider(
+                    label, journey.LEVELS, value=journey.LEVELS[int(old.get(key, 0))], key=f"s_{key}"))
+        note = st.text_input("Notes (optional)", old.get("note", ""), placeholder="e.g. new spots on chin, bloated after dinner")
+        if st.form_submit_button("Save today's symptoms", type="primary"):
+            storage.save_symptoms(day, {**levels, "note": note})
+            st.toast("Saved. Thank you for listening to your body 💜")
+            st.rerun()
+
+    sym = journey.symptom_days()
+    if sym:
+        ui.section("Last 30 days", "Darker = stronger · dotted = not logged · hover a square for details")
+        days30 = [(date.today() - timedelta(days=i)).isoformat() for i in range(29, -1, -1)]
+        grid = [[(float(sym[d].get(k, 0)) if d in sym else None) for d in days30] for k in journey.SYMPTOMS]
+        st.markdown(f'<div class="soft-panel">{ui.heat_grid_svg(list(journey.SYMPTOMS.values()), [d[8:] + "/" + d[5:7] for d in days30], grid, col_every=5)}</div>',
+                    unsafe_allow_html=True)
+
+        by_phase = journey.symptoms_by_phase()
+        if by_phase:
+            ui.section("By cycle phase", "Average level in each phase of your cycle, from the period dates you've logged")
+            phases = list(by_phase)
+            grid = [[by_phase[ph][k] for ph in phases] for k in journey.SYMPTOMS]
+            labels = [f"{ph}|{by_phase[ph]['_days']} days" for ph in phases]
+            c1, _ = st.columns([2, 1])
+            c1.markdown(f'<div class="soft-panel">{ui.heat_grid_svg(list(journey.SYMPTOMS.values()), labels, grid, cell=58, label_w=110)}</div>',
+                        unsafe_allow_html=True)
+
+        ui.section("Patterns Tulsi found", "Only shown when there's enough data and it's unlikely to be luck")
+        patterns = journey.symptom_patterns()
+        if patterns:
+            for pt in patterns:
+                st.markdown(ui.card(f"{'🔎' if pt['strength'] == 'Strong pattern' else '🌱'} {pt['strength']}",
+                                    f"{ui.html.escape(pt['text'])}<br><span style='font-size:.85rem'>{ui.html.escape(pt['evidence'])}</span>"),
+                            unsafe_allow_html=True)
+        else:
+            st.caption(f"You've logged symptoms on {len(sym)} day(s). Patterns need at least 3 days on each side of a "
+                       "comparison (e.g. 3 low-sleep days and 3 good-sleep days), so keep logging. About 2-3 weeks is ideal.")
+
+        b1, b2 = st.columns(2)
+        b1.button("💬 Ask Tulsi about my symptoms", type="primary", on_click=go_to_chat, args=("🌡️ Explain my symptoms",))
+        b2.download_button("🩺 Download a summary for my doctor (PDF)", cards.doctor_report(profile),
+                           file_name=f"health_summary_{date.today().isoformat()}.pdf", mime="application/pdf",
+                           key="doc_report_sym")
+    else:
+        st.caption("No symptoms logged yet. Start today, and in a couple of weeks Tulsi can show you what affects them.")
+
 
 elif page == "🎲 Walk challenge":
     ui.hero("🎲", "Tulsi's Garden Path", "A walking game with ladders and no snakes. Every km moves you forward 💜")
@@ -288,7 +424,9 @@ elif page == "🎲 Walk challenge":
         f1, f2 = st.columns(2)
         with f1:
             st.markdown("**Your friend code**: copy it and send it on WhatsApp")
-            st.code(challenge.make_code(prog["name"], prog), language=None)
+            my_code = challenge.make_code(prog["name"], prog)
+            st.code(my_code, language=None)
+            st.link_button("📲 Send it on WhatsApp", challenge.whatsapp_link(prog["name"], my_code))
             st.caption("Send a fresh code whenever you've walked more. Only your name, square and km are shared.")
         with f2:
             with st.form("add_friend", clear_on_submit=True):
@@ -297,8 +435,10 @@ elif page == "🎲 Walk challenge":
                     try:
                         challenge.save_friend(challenge.read_code(code))
                         st.rerun()
+                    except ValueError as err:
+                        st.error(str(err))
                     except Exception:
-                        st.error("That code doesn't look right. It should start with TULSI-")
+                        st.error("That code doesn't look right. Ask your friend to copy it again.")
             with st.expander("Friend doesn't have the app? Add them by hand"):
                 with st.form("manual_friend", clear_on_submit=True):
                     m1, m2 = st.columns(2)
@@ -310,8 +450,10 @@ elif page == "🎲 Walk challenge":
                         st.rerun()
         for f in friends:
             r1, r2 = st.columns([6, 1])
+            age = challenge.days_old(f)
+            stale = f" · ⏳ {age} days old, ask for a fresh code" if age and age >= 3 else ""
             r1.write(f"👤 **{f['name']}**: square {f['pos']}, {f['km']} km"
-                     f"{' (added by hand)' if f.get('manual') else ''} · updated {f.get('updated', '')}")
+                     f"{' (added by hand)' if f.get('manual') else ''}{stale}")
             if r2.button("Remove", key=f"rmf_{f['name']}"):
                 challenge.remove_friend(f["name"])
                 st.rerun()
@@ -362,26 +504,36 @@ elif page == "📸 Food scan":
                 edited = st.data_editor(
                     scan["items"], num_rows="dynamic", key="scan_editor",
                     column_config={
-                        "name": "Food", "portion": "Portion", "calories": "Calories",
+                        "name": "Food", "portion": "Portion (in photo)", "calories": "Calories",
                         "protein_g": "Protein (g)", "carbs_g": "Carbs (g)",
                         "fat_g": "Fat (g)", "fibre_g": "Fibre (g)",
+                        "servings": "Servings eaten (1 = as in photo)",
                     },
                 )
-            total = sum(int(float(i.get("calories") or 0)) for i in edited)
-            sums = {k: sum(float(i.get(k) or 0) for i in edited) for k in ("protein_g", "carbs_g", "fibre_g")}
+            # what you actually ate = photo estimate x servings, plus a check that the numbers add up
+            eaten = []
+            for item in edited:
+                row = food.scaled(item)
+                warn = food.macro_check(item)
+                if warn:
+                    row["warn"] = warn
+                eaten.append(row)
+            total = sum(int(float(i.get("calories") or 0)) for i in eaten)
+            sums = {k: sum(float(i.get(k) or 0) for i in eaten) for k in ("protein_g", "carbs_g", "fibre_g")}
             summary.markdown(ui.tiles([
                 ("🔥 CALORIES", f"{total}", "kcal (estimate)"),
                 ("💪 PROTEIN", f"{sums['protein_g']:.0f} g", "keeps you full"),
                 ("🌾 CARBS", f"{sums['carbs_g']:.0f} g", "energy"),
                 ("🥦 FIBRE", f"{sums['fibre_g']:.0f} g", "great for PCOS"),
             ]), unsafe_allow_html=True)
-            cards.markdown(ui.food_cards(edited), unsafe_allow_html=True)
+            cards.markdown(ui.food_cards(eaten), unsafe_allow_html=True)
             if scan.get("tip"):
                 st.markdown(f'<div class="tip">💡 <b>Tulsi\'s tip:</b> {ui.html.escape(scan["tip"])}</div>',
                             unsafe_allow_html=True)
             st.caption(f"Estimates from a photo (confidence: {scan['confidence']}). They're a guide, not exact numbers.")
             if st.button(f"✅ Save to {meal_name}", type="primary"):
-                storage.add_meal(day, {"meal": meal_name, "items": edited, "calories": total})
+                storage.add_meal(day, {"meal": meal_name, "items": [{k: v for k, v in i.items() if k != "warn"} for i in eaten],
+                                       "calories": total})
                 del st.session_state.scan
                 st.toast(f"Saved to {meal_name}! 🌱")
                 st.rerun()
@@ -480,18 +632,6 @@ elif page == "📊 Progress":
                    "Quieter weeks are part of the journey too. 💜")
         with st.expander("📋 See the data as a table"):
             st.dataframe(df.sort_index(ascending=False))
-
-    # ----- PCOS symptom patterns -----
-    sym_days = journey.symptom_days()
-    if sym_days:
-        st.markdown('<div class="section-label">PCOS symptom patterns</div>', unsafe_allow_html=True)
-        insights = journey.symptom_insights()
-        if insights:
-            for text in insights:
-                st.markdown(ui.card("🔎 Pattern spotted", ui.html.escape(text)), unsafe_allow_html=True)
-        else:
-            st.caption(f"You've logged symptoms on {len(sym_days)} day(s). After about a week, Tulsi starts spotting "
-                       "patterns with your sleep, stress and cycle.")
 
     st.download_button("🩺 Download a health summary for my doctor (PDF)", cards.doctor_report(profile),
                        file_name=f"health_summary_{date.today().isoformat()}.pdf", mime="application/pdf")

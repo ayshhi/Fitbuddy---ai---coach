@@ -274,6 +274,12 @@ def journey_to_text(profile: dict) -> str:
             lines.append("- PCOS symptoms logged this week: " + ", ".join(listed))
     for insight in journey.symptom_insights()[:3]:
         lines.append(f"- Pattern noticed: {insight}")
+    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    cravings = [c for c in storage.load_cravings() if c["when"][:10] >= week_ago]
+    if cravings:
+        lines.append(f"- Cravings logged this week: {len(cravings)} "
+                     f"(mostly {max(set(c['kind'] for c in cravings), key=[c['kind'] for c in cravings].count)}; "
+                     f"triggers: {', '.join(sorted(set(c.get('trigger', '') for c in cravings)))})")
     wins = storage.load_wins()[-5:]
     if wins:
         lines.append("- Recent non-scale wins: " + "; ".join(f"{w['emoji']} {w['text']}" for w in wins))
@@ -356,6 +362,11 @@ QUICK_ACTIONS = {
     ),
     "🛒 Grocery list": "",  # filled in by grocery_request() with the latest meal plan
     "🆘 Craving SOS": "",   # filled in by craving_request()
+    "🌡️ Explain my symptoms": (
+        "Look at the PCOS symptoms I've logged and any patterns noticed. In 3-4 short messages: what you notice "
+        "(only from my data, don't invent patterns), 2 practical things to try this week, and when it would be "
+        "worth talking to my doctor. Be gentle."
+    ),
 }
 
 CRAVINGS = ["🍫 Something sweet", "🍟 Fried or salty", "🍚 Rice or carbs", "🥤 A cold drink", "😩 I'm just stressed or bored"]

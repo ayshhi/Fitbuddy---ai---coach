@@ -194,36 +194,147 @@ LEVELS = ["None", "Mild", "Moderate", "Strong"]
 
 
 def symptom_days() -> dict:
-    """{date: {symptom: 0-3}} from check-ins."""
-    return {d: c["symptoms"] for d, c in storage.load_checkins().items() if c.get("symptoms")}
+    """{date: {symptom: 0-3}} from the symptoms log (and older check-ins that included symptoms)."""
+    days = {d: c["symptoms"] for d, c in storage.load_checkins().items() if c.get("symptoms")}
+    for d, entry in storage.load_symptoms().items():
+        levels = {k: int(v) for k, v in entry.items() if k in SYMPTOMS}
+        if any(levels.values()) or d not in days:
+            days[d] = levels
+    return days
 
 
-def symptom_insights(min_days: int = 3) -> list[str]:
-    """Simple, honest patterns: compares average symptom levels between two groups of days,
-    and only reports a difference when both groups have enough days."""
+def _permutation_p(a: list[float], b: list[float], rounds: int = 2000) -> float:
+    """How likely is a gap this big between group a and group b just by chance?
+    Shuffles the days between the two groups many times and counts how often chance does as well."""
+    import random
+    rng = random.Random(42)  # fixed seed, so the same data always gives the same answer
+    observed = mean(a) - mean(b)
+    pooled, n = a + b, len(a)
+    hits = 0
+    for _ in range(rounds):
+        rng.shuffle(pooled)
+        if mean(pooled[:n]) - mean(pooled[n:]) >= observed:
+            hits += 1
+    return (hits + 1) / (rounds + 1)
+
+
+def phase_on(day: str) -> str | None:
+    info = cycle_info(date.fromisoformat(day))
+    return info["phase"] if info else None
+
+
+def symptom_patterns(min_days: int = 3) -> list[dict]:
+    """Compares each symptom between two groups of days (e.g. low-sleep vs normal-sleep days).
+    A pattern is only reported when both groups have enough days, the gap is meaningful (at least
+    half a level), and a permutation test says it's unlikely to be chance."""
     days = symptom_days()
     if len(days) < min_days * 2:
         return []
     checkins = storage.load_checkins()
     rows = all_days()
-    groups = {
-        "after low sleep (under 6.5 h)": lambda d: float(rows.get(d, {}).get("sleep_hours", 0) or 0) and float(rows[d]["sleep_hours"]) < 6.5,
-        "on high-stress days (4-5)": lambda d: int(checkins.get(d, {}).get("stress", 0) or 0) >= 4,
-        "in the week before your period": lambda d: (cycle_info(date.fromisoformat(d)) or {}).get("phase") == "Luteal",
-        "during your period": lambda d: (cycle_info(date.fromisoformat(d)) or {}).get("phase") == "Period",
-    }
-    found = []
-    for label, test in groups.items():
-        inside = [d for d in days if test(d)]
-        outside = [d for d in days if not test(d)]
+    water = storage.load_water()
+
+    def sleep(d):
+        return float(rows.get(d, {}).get("sleep_hours", 0) or 0)
+
+    factors = [
+        ("after low sleep (under 6.5 h)", "on nights with 6.5 h or more", lambda d: 0 < sleep(d) < 6.5, lambda d: sleep(d) >= 6.5),
+        ("on high-stress days (4-5)", "on calmer days (1-3)", lambda d: int(checkins.get(d, {}).get("stress", 0) or 0) >= 4,
+         lambda d: 0 < int(checkins.get(d, {}).get("stress", 0) or 0) <= 3),
+        ("in the week before your period", "at other times", lambda d: phase_on(d) == "Luteal",
+         lambda d: phase_on(d) not in (None, "Luteal")),
+        ("during your period", "at other times", lambda d: phase_on(d) == "Period", lambda d: phase_on(d) not in (None, "Period")),
+        ("on days with under 6 glasses of water", "on days with 6+ glasses", lambda d: 0 < int(water.get(d, 0) or 0) < 6,
+         lambda d: int(water.get(d, 0) or 0) >= 6),
+    ]
+    candidates, tests = [], 0
+    for label, other, test_in, test_out in factors:
+        inside = [d for d in days if test_in(d)]
+        outside = [d for d in days if test_out(d)]
         if len(inside) < min_days or len(outside) < min_days:
             continue
         for key, name in SYMPTOMS.items():
-            a = mean(days[d].get(key, 0) for d in inside)
-            b = mean(days[d].get(key, 0) for d in outside)
-            if a - b >= 0.7:
-                found.append(f"{name} tends to be worse {label} ({LEVELS[round(a)].lower()} vs {LEVELS[round(b)].lower()}).")
+            tests += 1
+            a = [float(days[d].get(key, 0)) for d in inside]
+            b = [float(days[d].get(key, 0)) for d in outside]
+            if mean(a) - mean(b) < 0.5:  # too small to matter, even if real
+                continue
+            candidates.append((name, label, other, a, b, _permutation_p(a, b)))
+
+    # We test many symptom x factor combinations, so some will look "significant" by luck.
+    # Benjamini-Hochberg adjusts for that: q is the p-value corrected for the number of tests.
+    candidates.sort(key=lambda c: c[5])
+    qs, running = [0.0] * len(candidates), 1.0
+    for i in range(len(candidates) - 1, -1, -1):
+        running = min(running, candidates[i][5] * tests / (i + 1))
+        qs[i] = running
+
+    found = []
+    for (name, label, other, a, b, p), q in zip(candidates, qs):
+        if q > 0.1:
+            continue
+        strength = "Strong pattern" if q < 0.05 and min(len(a), len(b)) >= 5 else "Possible pattern"
+        found.append({
+            "symptom": name, "factor": label, "strength": strength, "q": round(q, 3),
+            "text": f"{name} is worse {label}: on average {LEVELS[round(mean(a))].lower()} "
+                    f"vs {LEVELS[round(mean(b))].lower()} {other}.",
+            "evidence": f"Based on {len(a)} vs {len(b)} logged days. After checking {tests} combinations, "
+                        f"the chance this is just luck is about {q:.0%}.",
+        })
     return found
+
+
+def symptom_insights(min_days: int = 3) -> list[str]:
+    """Short sentences for Tulsi's context and the doctor report."""
+    return [f"{p['strength']}: {p['text']}" for p in symptom_patterns(min_days)]
+
+
+def symptoms_by_phase() -> dict:
+    """{phase: {symptom: average level}} for days where the cycle phase is known."""
+    days = symptom_days()
+    out = {}
+    for phase in ["Period", "Follicular", "Ovulation", "Luteal"]:
+        ds = [d for d in days if phase_on(d) == phase]
+        if ds:
+            out[phase] = {k: mean(float(days[d].get(k, 0)) for d in ds) for k in SYMPTOMS} | {"_days": len(ds)}
+    return out
+
+
+# ---------------- Cravings ----------------
+
+SWAPS = {
+    "🍫 Something sweet": ["2 dates with a little peanut butter", "Banana with cinnamon", "2-3 squares of dark chocolate (70%+)",
+                          "Curd with fruit and a drizzle of honey", "One small ragi laddu"],
+    "🍟 Fried or salty": ["Roasted makhana with a pinch of salt", "Roasted chana", "Cucumber with chaat masala and lemon",
+                         "A small handful of masala peanuts", "Sprouts chaat"],
+    "🍚 Rice or carbs": ["A smaller portion of rice with extra dal and veg", "Millet upma or ragi dosa",
+                         "Whole wheat roti with a protein curry", "Puttu with kadala curry (more kadala, less puttu)"],
+    "🥤 A cold drink": ["Sambharam (spiced buttermilk)", "Lemon water with mint", "Tender coconut water",
+                       "Sparkling water with lime and salt"],
+    "😩 I'm just stressed or bored": ["A 5-minute walk outside", "Call or text a friend", "A cup of herbal or ginger tea",
+                                      "Write down what's bothering you", "Stretch for 3 minutes"],
+}
+TRIGGERS = ["😣 Stressed", "🥱 Tired", "😐 Bored", "🩸 Period / PMS", "🍽️ Actually hungry", "📱 Saw it somewhere", "🤷 Not sure"]
+OUTCOMES = {"mindful": "💜 Ate it mindfully", "swap": "🥗 Had a swap", "passed": "🌊 It passed"}
+
+
+def craving_patterns() -> dict:
+    """Counts cravings by time of day, trigger, and cycle phase."""
+    from collections import Counter
+    cr = storage.load_cravings()
+    if not cr:
+        return {}
+
+    def slot(h):
+        return "Morning" if 5 <= h < 12 else "Afternoon" if h < 17 else "Evening" if h < 21 else "Night"
+
+    times = Counter(slot(int(c["when"][11:13])) for c in cr)
+    triggers = Counter(c.get("trigger") or "🤷 Not sure" for c in cr)
+    phases = Counter(phase_on(c["when"][:10]) or "Unknown" for c in cr)
+    outcomes = Counter(c.get("outcome") for c in cr if c.get("outcome"))
+    return {"total": len(cr), "times": times, "triggers": triggers, "phases": phases, "outcomes": outcomes}
+
+
 
 
 def daily_km(rows: dict) -> dict:

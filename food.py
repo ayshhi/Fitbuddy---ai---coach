@@ -84,7 +84,31 @@ def _parse_json(text: str) -> dict:
             "fat_g": round(float(item.get("fat_g", 0) or 0), 1),
             "fibre_g": round(float(item.get("fibre_g", 0) or 0), 1),
         })
+    for item in items:
+        item["servings"] = 1.0  # you can change this if you ate more or less than the photo shows
     return {"items": items, "tip": data.get("tip", ""), "confidence": data.get("confidence", "medium")}
+
+
+def scaled(item: dict) -> dict:
+    """The item's numbers multiplied by how many servings you actually ate."""
+    k = float(item.get("servings") or 1)
+    out = dict(item)
+    for key in ("calories", "protein_g", "carbs_g", "fat_g", "fibre_g"):
+        out[key] = round(float(item.get(key) or 0) * k, 1)
+    out["calories"] = round(out["calories"])
+    return out
+
+
+def macro_check(item: dict) -> str | None:
+    """Protein and carbs have about 4 kcal per gram and fat about 9. If the AI's calories are far from
+    what its own macros add up to, one of the numbers is probably wrong, so we say so."""
+    kcal = float(item.get("calories") or 0)
+    from_macros = 4 * float(item.get("protein_g") or 0) + 4 * float(item.get("carbs_g") or 0) + 9 * float(item.get("fat_g") or 0)
+    if kcal < 40 or from_macros == 0:
+        return None
+    if abs(from_macros - kcal) / kcal > 0.3:
+        return f"Numbers may not add up: the nutrients suggest about {from_macros:.0f} kcal, not {kcal:.0f}."
+    return None
 
 
 def scan_meal(image_bytes: bytes, note: str = "") -> dict:

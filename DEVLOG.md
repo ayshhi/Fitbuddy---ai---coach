@@ -139,6 +139,25 @@ I didn't like the first layout, and the coach's long paragraphs felt like readin
 - **Craving SOS, PCOS symptom tracker and doctor report PDF:** practical tools for living with PCOS.
   Symptom patterns are only reported when there are enough days on both sides to compare.
 
+## Step 11: Making features deeper, not just wider
+
+After an honest review, some features were too surface-level, so I improved them:
+
+- **Symptom patterns:** the first version compared simple averages, and in testing it reported a pattern in
+  completely random data. I switched to a **permutation test** (shuffling days between groups to see how often
+  chance alone gives the same gap), plus a **Benjamini–Hochberg correction**, because checking 35 symptom × factor
+  combinations makes some look real by luck. After that, only the true pattern in my test data was reported.
+  Symptoms now have their own page, with a 30-day grid and averages by cycle phase.
+- **Craving SOS** became its own page: logging strength and trigger, a breathing exercise, instant swap ideas that
+  work even if the AI is down, a no-guilt follow-up ("ate it mindfully / had a swap / it passed"), and patterns
+  by time of day, trigger and cycle phase.
+- **Food scan:** added "servings eaten", plus a sanity check: protein and carbs are about 4 kcal per gram and
+  fat about 9, so if the AI's calories don't match its own nutrients, the app warns you.
+- **Friend codes:** added a checksum so typos are caught, ignore spaces added by WhatsApp, show when a friend's
+  code is getting old, and add a one-tap "Send on WhatsApp" button.
+- **Layout:** more space between sections, and a new **Home page** with Tulsi under a rainbow and "Let's start".
+- **Bug caught by testing:** an edit accidentally removed a helper function; my page-by-page tests found it before release.
+
 ---
 
 ## What I learned
@@ -149,3 +168,4 @@ I didn't like the first layout, and the coach's long paragraphs felt like readin
 - How to make a demo reliable with free models: fallbacks, shorter history, friendly errors.
 - How to handle real, messy data (Samsung's export format).
 - Privacy basics: local storage, consent, and keeping secrets out of Git.
+- Statistics in practice: why testing many things at once creates false patterns, and how to correct for it.

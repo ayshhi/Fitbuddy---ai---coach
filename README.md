@@ -9,7 +9,7 @@ and my cycle became regular again.
 ## Features (so far)
 - **Health profile**: conditions (e.g. PCOS), medications, cycle, diet, goals and limitations.
 - **Medical report upload**: the AI summarises key findings from a PDF report, and you check them before saving.
-- **📸 Food photo scanning**: snap or upload a meal photo, and Gemini identifies the foods (including Kerala dishes) and estimates calories, protein, carbs, fat and fibre. You can edit the results before saving, and the total flows into your daily check-in.
+- **📸 Food photo scanning** (with servings eaten and a check that calories match protein/carbs/fat): snap or upload a meal photo, and Gemini identifies the foods (including Kerala dishes) and estimates calories, protein, carbs, fat and fibre. You can edit the results before saving, and the total flows into your daily check-in.
 - **📊 Samsung Health import + progress dashboard**: upload your Samsung Health export (CSV files or a .zip). Your steps, distance, walks, sleep and weight then fill in daily check-ins automatically and show as weekly or monthly charts.
 - **Daily check-in**: sleep, steps, distance (from Samsung Health), calories, exercise, stress, energy and mood.
 - **AI coach feedback**: an encouraging look at your day and week, plus a plan for tomorrow
@@ -26,8 +26,9 @@ and my cycle became regular again.
 - **💧 Water Tulsi**: every glass you drink waters Tulsi, with a watering-can animation. After 8 glasses her leaves sparkle with dewdrops.
 - **🎲 Tulsi's Garden Path**: a snakes-and-ladders walking game with **no snakes**. Every km moves you a square, ladders unlock with healthy habits, and you can race friends using shareable friend codes (no server, no health data shared).
 - **📤 Share card**: a downloadable progress image for WhatsApp or Instagram. You choose what's shown, and weight is hidden by default.
-- **🆘 Craving SOS**: kind, quick help when a craving hits: a healthier swap, a 2-minute distraction, and no guilt.
-- **🌡️ PCOS symptom tracker**: log acne, hair fall, bloating, cramps, cravings, fatigue and mood. FitBuddy spots patterns with sleep, stress and cycle phase.
+- **🌈 Home page**: Tulsi bouncing under an animated rainbow, with today's status and a "Let's start" button.
+- **🆘 Craving SOS page**: log the craving, how strong it is and what's behind it, then breathe with Tulsi. You get instant Indian swap ideas (no AI needed), can talk it through with Tulsi, and see your patterns by time of day, trigger and cycle phase.
+- **🌡️ Symptoms page**: log 7 PCOS symptoms, see a 30-day grid and averages by cycle phase. Patterns with sleep, stress, cycle phase and water are checked with a permutation test plus a correction for testing many things at once (Benjamini–Hochberg), so chance findings aren't shown as real.
 - **🩺 Doctor report**: a one-page PDF summary of weight, cycle, sleep, activity and symptoms for appointments.
 - **🌿 Tulsi mascot**: bounces in the corner, waves, and smiles with floating hearts when you click her.
 
