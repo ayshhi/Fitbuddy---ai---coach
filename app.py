@@ -69,7 +69,7 @@ if page == "🏠 Today":
     st.markdown(ui.chat_window(
         [{"role": "assistant", "content": f"Hey {name}! 🌿 How was your day? Tell me below and "
           "I'll help you plan a lovely tomorrow 💜", "time": ui.now_time()}],
-        header=False), unsafe_allow_html=True)
+        ), unsafe_allow_html=True)
     st.write("")
 
     today_str = date.today().isoformat()
@@ -174,17 +174,20 @@ if page == "🏠 Today":
                    f"{chr(10) + '📝 ' + notes if notes else ''}")
         me = {"role": "user", "content": summary, "time": ui.now_time()}
         box = st.empty()
-        box.markdown(ui.chat_window([me], typing=True, status="typing..."), unsafe_allow_html=True)
+        box.markdown(ui.chat_window([me], typing=True, pop_from=0), unsafe_allow_html=True)
         try:
             feedback = coach.daily_feedback(profile, storage.recent_checkins(7), day)
+            box.empty()  # replaced by the full conversation below
             st.session_state.feedback = [me] + ui.coach_bubbles(feedback)
+            st.session_state.feedback_new = True
             storage.save_chat(storage.load_chat() + st.session_state.feedback)  # also appears in the chat
         except coach.CoachError as err:
             box.empty()
             show_error(err)
 
     if st.session_state.get("feedback"):
-        st.markdown(ui.chat_window(st.session_state.feedback), unsafe_allow_html=True)
+        pop = 1 if st.session_state.pop("feedback_new", False) else None
+        st.markdown(ui.chat_window(st.session_state.feedback, pop_from=pop), unsafe_allow_html=True)
         st.caption("💬 Want to talk more? Continue in **Chat with Tulsi**.")
 
     # This week's summary
@@ -459,44 +462,49 @@ elif page == "💬 Chat with Tulsi":
         chat = [{"role": "assistant", "time": ui.now_time(),
                  "content": f"Hi {name}! I'm Tulsi 🌿, your little health buddy."},
                 {"role": "assistant", "time": ui.now_time(),
-                 "content": "No judgement here, ever 💜 Type anything below, or tap a button for a "
+                 "content": "No judgement here, ever 💜 Type anything below, or tap ✨ for a "
                             "meal plan or a home workout made just for you."}]
 
-    window = st.empty()
-    window.markdown(ui.chat_window(chat), unsafe_allow_html=True)
+    st.markdown(ui.chat_header(), unsafe_allow_html=True)
+    shown = 60  # show the most recent messages
+    offset = max(0, len(chat) - shown)
+    flow = st.empty()
+    flow.markdown(ui.chat_window(chat[offset:]), unsafe_allow_html=True)
 
-    # Your own message: a typing bar under the chat, like WhatsApp
-    with st.form("message", clear_on_submit=True, border=False):
-        c1, c2 = st.columns([5, 1])
-        typed = c1.text_input("Message", placeholder="Type a message to Tulsi...", label_visibility="collapsed")
-        sent = c2.form_submit_button("Send ➤", type="primary")
+    # ----- The message bar: stays at the bottom of the screen -----
+    with st.container(key="composer"):
+        c_plus, c_form, c_mic = st.columns([1, 8, 1], vertical_alignment="center")
 
-    # Voice: record a message, Tulsi can answer out loud
-    v1, v2 = st.columns([3, 2])
-    audio = v1.audio_input("🎙️ Talk to Tulsi") if hasattr(st, "audio_input") else None
-    speak = v2.toggle("🔊 Tulsi speaks her replies", key="speak")
-    voice_prompt = None
-    if audio is not None:
-        audio_bytes = audio.getvalue()
-        audio_id = hash(audio_bytes)
-        if st.session_state.get("last_audio") != audio_id:  # only handle each recording once
-            st.session_state.last_audio = audio_id
-            with st.spinner("Listening..."):
-                try:
-                    voice_prompt = "🎙️ " + coach.transcribe(audio_bytes, audio.type or "audio/wav")
-                except coach.CoachError as err:
-                    show_error(err)
+        with c_plus.popover("✨", help="Plans & ideas"):
+            st.markdown("**Plans for you**")
+            for label in ["🥗 Weekly meal plan", "🍱 Quick lunchbox ideas", "🛒 Grocery list", "🏠 Home workout plan"]:
+                if st.button(label, key=f"qa_{label}"):
+                    st.session_state.pending = label
+            st.markdown("**Quick help**")
+            for label in ["⏱️ 10-min home workout", "😔 I'm feeling unmotivated", "😴 Tips for better sleep",
+                          "📬 My weekly report"]:
+                if st.button(label, key=f"qb_{label}"):
+                    st.session_state.pending = label
 
-    # Quick-action buttons
-    actions = list(coach.QUICK_ACTIONS)
-    plans = ["🥗 Weekly meal plan", "🍱 Quick lunchbox ideas", "🛒 Grocery list", "🏠 Home workout plan"]
-    helps = [a for a in actions if a not in plans]
-    for label_text, group, key in [("Plans for you", plans, "qa"), ("Quick help", helps, "qb")]:
-        st.markdown(f'<div class="section-label">{label_text}</div>', unsafe_allow_html=True)
-        cols = st.columns(4)
-        for i, label in enumerate(group):
-            if cols[i % 4].button(label, key=f"{key}{i}"):
-                st.session_state.pending = label
+        with c_form.form("message", clear_on_submit=True, border=False):
+            f1, f2 = st.columns([6, 1], vertical_alignment="center")
+            typed = f1.text_input("Message", placeholder="Message Tulsi...", label_visibility="collapsed")
+            sent = f2.form_submit_button("➤", type="primary")
+
+        voice_prompt = None
+        with c_mic.popover("🎙️", help="Talk to Tulsi"):
+            speak = st.toggle("🔊 Tulsi speaks her replies", key="speak")
+            audio = st.audio_input("Record a message") if hasattr(st, "audio_input") else None
+            if audio is not None:
+                audio_bytes = audio.getvalue()
+                audio_id = hash(audio_bytes)
+                if st.session_state.get("last_audio") != audio_id:  # only handle each recording once
+                    st.session_state.last_audio = audio_id
+                    with st.spinner("Listening..."):
+                        try:
+                            voice_prompt = "🎙️ " + coach.transcribe(audio_bytes, audio.type or "audio/wav")
+                        except coach.CoachError as err:
+                            show_error(err)
 
     prompt = (typed.strip() if sent and typed.strip() else None) or voice_prompt or st.session_state.pop("pending", None)
     if prompt:
@@ -506,26 +514,37 @@ elif page == "💬 Chat with Tulsi":
         elif prompt in coach.QUICK_ACTIONS:
             msg["ask"] = coach.QUICK_ACTIONS[prompt]
         chat.append(msg)
-        window.markdown(ui.chat_window(chat, typing=True, status="typing..."), unsafe_allow_html=True)
+        offset = max(0, len(chat) - shown)
+        # your bubble pops up straight away, with Tulsi "typing"
+        flow.markdown(ui.chat_window(chat[offset:], typing=True, pop_from=len(chat) - 1 - offset),
+                      unsafe_allow_html=True)
+        ui.scroll_to_bottom()
         try:
             reply = coach.chat_reply(profile, storage.recent_checkins(7), chat)
+            first_new = len(chat)
             chat += ui.coach_bubbles(reply)
             storage.save_chat(chat)
+            offset = max(0, len(chat) - shown)
+            # Tulsi's replies pop in one after another
+            flow.markdown(ui.chat_window(chat[offset:], pop_from=first_new - offset), unsafe_allow_html=True)
             if speak or voice_prompt:
                 st.session_state.voice_reply = ui.speech(reply)
                 if st.session_state.voice_reply is None:
                     st.caption("🔇 To hear Tulsi, run `pip install gtts` once and restart the app.")
         except coach.CoachError as err:
             chat.pop()
+            flow.markdown(ui.chat_window(chat[max(0, len(chat) - shown):]), unsafe_allow_html=True)
             show_error(err)
-        window.markdown(ui.chat_window(chat), unsafe_allow_html=True)
+    ui.scroll_to_bottom()
 
     if st.session_state.get("voice_reply"):
         st.audio(st.session_state.pop("voice_reply"), format="audio/mp3", autoplay=True)
 
-    if storage.load_chat() and st.button("🗑️ Clear chat"):
-        storage.save_chat([])
-        st.rerun()
+    if storage.load_chat():
+        with st.expander("⚙️ Chat options"):
+            if st.button("🗑️ Clear chat"):
+                storage.save_chat([])
+                st.rerun()
 
 
 # ---------------- Page 3: Health profile ----------------

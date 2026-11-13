@@ -134,9 +134,3 @@ I didn't like the first layout, and the coach's long paragraphs felt like readin
 - How to make a demo reliable with free models: fallbacks, shorter history, friendly errors.
 - How to handle real, messy data (Samsung's export format).
 - Privacy basics: local storage, consent, and keeping secrets out of Git.
-
-## What's next
-
-- Use the app daily and fix anything I find (each fix will be its own commit).
-- Add screenshots to the README.
-- Later: a mobile version with live step data, reminders, and feedback from other women with PCOS.

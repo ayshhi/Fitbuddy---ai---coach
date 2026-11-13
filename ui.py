@@ -70,57 +70,55 @@ div[data-testid="stMetric"] {
 .section-label { font-size:.8rem; font-weight:600; color: var(--muted); text-transform: uppercase;
                  letter-spacing:.05em; margin: 14px 0 4px; }
 
-/* ---------- Chat ---------- */
-.chat-header {
-  display:flex; align-items:center; gap:12px; background: var(--purple-dark); color:#fff;
-  padding:.6rem 1rem; border-radius:16px 16px 0 0;
-}
-.chat-header img { width:2.6rem; height:2.6rem; border-radius:50%; background:#fff; }
-.chat-header b { font-size:1.05rem; }
-.chat-header span { display:block; font-size:.78rem; opacity:.85; }
-.chat-window {
-  background: var(--chat-bg);
-  background-image: radial-gradient(rgba(78,42,132,.07) 1px, transparent 1px);
-  background-size: 18px 18px;
-  padding: 14px 12px 18px; border-radius: 0 0 16px 16px; min-height: 120px;
-  max-height: 65vh; overflow-y: auto;
-  display: flex; flex-direction: column-reverse;  /* keeps the newest message in view */
-}
-.chat-window.solo { border-radius:16px; }
-.day-chip {
-  text-align:center; margin:6px 0 10px;
-}
-.day-chip span {
-  background:#FFFFFFCC; color:var(--muted); font-size:.72rem; padding:4px 10px; border-radius:8px;
-}
-.row { display:flex; margin: 3px 0; }
+/* ---------- Chat: messages flow on the page, bubbles pop in ---------- */
+.chat-head { display:flex; align-items:center; gap:.8rem; margin: .2rem 0 1rem; }
+.chat-head img { width:3rem; height:3rem; border-radius:50%; background:#E7F4EC;
+                 box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px #C38BEA; }
+.chat-head b { font-size:1.25rem; color:var(--ink); }
+.chat-head span { display:block; font-size:.82rem !important; color:var(--muted); }
+.chat-head .dot { display:inline-block; width:.5rem; height:.5rem; border-radius:50%; background:#3FAE74; margin-right:.3rem; }
+.chat-flow { padding: .2rem 0 .6rem; }
+.day-chip { text-align:center; margin:.4rem 0 .8rem; }
+.day-chip span { background:#F1EAFB; color:var(--muted); font-size:.72rem !important; padding:.2rem .7rem; border-radius:99px; }
+.row { display:flex; align-items:flex-start; gap:.55rem; margin:.22rem 0; }
 .row.me { justify-content:flex-end; }
+.row.first { margin-top: .9rem; }
+.av { width:2.1rem; height:2.1rem; flex-shrink:0; border-radius:50%; }
+.av img { width:100%; height:100%; border-radius:50%; background:#E7F4EC; }
 .bubble {
-  position:relative; max-width: 80%; padding: .45rem .7rem 1.15rem .7rem; border-radius: 10px;
-  font-size: .95rem; line-height: 1.4; color: var(--ink); box-shadow: 0 1px .5px rgba(0,0,0,.13);
-  overflow-wrap: anywhere; min-width: 70px;
+  position:relative; max-width: 72%; padding: .6rem .9rem; border-radius: 1.1rem;
+  font-size: 1rem; line-height: 1.5; overflow-wrap:anywhere;
 }
-.row.coach .bubble { background: var(--coach); }
-.row.me .bubble { background: var(--me); }
-.row.coach.first .bubble { border-top-left-radius: 0; }
-.row.me.first .bubble { border-top-right-radius: 0; }
-.row.coach.first .bubble::before {
-  content:""; position:absolute; top:0; left:-7px; border-top:8px solid var(--coach); border-left:8px solid transparent;
-}
-.row.me.first .bubble::before {
-  content:""; position:absolute; top:0; right:-7px; border-top:8px solid var(--me); border-right:8px solid transparent;
-}
-.row.first { margin-top: 10px; }
-.bubble .time { position:absolute; right:.5rem; bottom:.2rem; font-size:.68rem !important; color: var(--muted); }
-.bubble .ticks { color:#8E5BD6; margin-left:3px; }
-.bubble ul { margin: 4px 0 2px 18px; padding:0; }
-.bubble li { margin: 2px 0; }
-.typing span {
-  display:inline-block; width:.45rem; height:.45rem; margin:0 .12rem; background:#A99BC2; border-radius:50%;
-  animation: blink 1.2s infinite both;
-}
-.typing span:nth-child(2) { animation-delay:.2s; } .typing span:nth-child(3) { animation-delay:.4s; }
-@keyframes blink { 0%,80%,100% { opacity:.25 } 40% { opacity:1 } }
+.row.coach .bubble { background:#FFFFFF; color:var(--ink); border:1px solid #EEE6F8;
+                     box-shadow: 0 2px 10px rgba(78,42,132,.06); }
+.row.me .bubble { background: linear-gradient(135deg, #7B3FBF 0%, #9B5DE5 100%); color:#FFFFFF;
+                  box-shadow: 0 3px 12px rgba(123,63,191,.25); }
+.row.coach.first .bubble { border-top-left-radius:.35rem; }
+.row.me.first .bubble { border-top-right-radius:.35rem; }
+.row.me .bubble b, .row.me .bubble li, .row.me .bubble p { color:#FFFFFF !important; }
+.bubble .time { display:block; text-align:right; margin-top:.15rem; font-size:.66rem !important; opacity:.6; }
+.bubble ul { margin: .3rem 0 .1rem 1.1rem; padding:0; }
+.bubble li { margin: .15rem 0; }
+
+/* the pop: new bubbles spring up one after another */
+.pop { animation: pop .5s cubic-bezier(.2,.9,.3,1.25) both; animation-delay: var(--d, 0s); }
+.row.coach.pop { transform-origin: top left; } .row.me.pop { transform-origin: top right; }
+@keyframes pop { 0% { opacity:0; transform: translateY(12px) scale(.9); } 100% { opacity:1; transform:none; } }
+
+.typing { display:inline-flex; gap:.25rem; padding:.85rem 1rem !important; }
+.typing span { width:.5rem; height:.5rem; background:#B9A6D9; border-radius:50%; animation: bounce 1.1s infinite both; }
+.typing span:nth-child(2) { animation-delay:.15s; } .typing span:nth-child(3) { animation-delay:.3s; }
+@keyframes bounce { 0%,70%,100% { transform:translateY(0); opacity:.5 } 35% { transform:translateY(-.35rem); opacity:1 } }
+
+/* the message bar sticks to the bottom of the screen */
+.st-key-composer { position: sticky; bottom: 0; z-index: 50; background: linear-gradient(180deg, rgba(250,247,253,0) 0%, #FAF7FD 30%);
+                   padding: 1.2rem 0 .8rem; }
+.st-key-composer div[data-testid="stForm"] { background:#FFFFFF; border:1.5px solid #D9C8F2 !important;
+                   border-radius: 999px; padding: .25rem .4rem .25rem 1rem; box-shadow: 0 6px 24px rgba(78,42,132,.12); }
+.st-key-composer input { border:none !important; background:transparent !important; box-shadow:none !important; }
+.st-key-composer div[data-baseweb="input"] { border:none !important; background:transparent !important; }
+.st-key-composer .stFormSubmitButton button { border-radius:999px; }
+.st-key-composer div[data-testid="stPopover"] button { border-radius:999px; }
 </style>
 """
 
@@ -176,32 +174,61 @@ def _md_to_html(text: str) -> str:
     return result
 
 
-def chat_html(messages: list[dict], typing: bool = False, day_label: str | None = None) -> str:
-    """messages: [{"role": "user"|"assistant", "content": str, "time": "9:41 AM"}]"""
+def _avatar_html() -> str:
+    return f'<div class="av"><img src="{AVATAR}"></div>'
+
+
+def chat_html(messages: list[dict], typing: bool = False, day_label: str | None = None,
+              pop_from: int | None = None) -> str:
+    """messages: [{"role": "user"|"assistant", "content": str, "time": "9:41 AM"}]
+    Messages at index >= pop_from get the pop-in animation, one after another."""
     parts = [f'<div class="day-chip"><span>{html.escape(day_label)}</span></div>'] if day_label else []
-    prev = None
-    for m in messages:
+    prev, delay = None, 0.0
+    for i, m in enumerate(messages):
         who = "me" if m["role"] == "user" else "coach"
-        first = " first" if who != prev else ""
-        ticks = '<span class="ticks">✓✓</span>' if who == "me" else ""
+        first = who != prev
+        pop = pop_from is not None and i >= pop_from
+        style = f' style="--d:{delay:.2f}s"' if pop else ""
+        if pop:
+            delay += 0.45 if who == "coach" else 0.1
+        avatar = (_avatar_html() if first else '<div class="av"></div>') if who == "coach" else ""
         parts.append(
-            f'<div class="row {who}{first}"><div class="bubble">{_md_to_html(m["content"])}'
-            f'<span class="time">{m.get("time", "")}{ticks}</span></div></div>'
+            f'<div class="row {who}{" first" if first else ""}{" pop" if pop else ""}"{style}>{avatar}'
+            f'<div class="bubble">{_md_to_html(m["content"])}<span class="time">{m.get("time", "")}</span></div></div>'
         )
         prev = who
     if typing:
-        first = " first" if prev != "coach" else ""
-        parts.append(f'<div class="row coach{first}"><div class="bubble typing" style="padding:.8rem 1rem">'
-                     '<span></span><span></span><span></span></div></div>')
+        first = prev != "coach"
+        avatar = _avatar_html() if first else '<div class="av"></div>'
+        parts.append(f'<div class="row coach{" first" if first else ""} pop">{avatar}'
+                     '<div class="bubble typing"><span></span><span></span><span></span></div></div>')
     return "".join(parts)
 
 
-def chat_window(messages: list[dict], typing: bool = False, header: bool = True,
-                day_label: str | None = None, status: str = "online") -> str:
-    head = (f'<div class="chat-header"><img src="{AVATAR}"><div><b>{COACH_NAME} 🌿</b>'
-            f'<span>{status}</span></div></div>') if header else ""
-    solo = "" if header else " solo"
-    return f'{head}<div class="chat-window{solo}"><div>{chat_html(messages, typing, day_label)}</div></div>'
+def chat_header(status: str = "online") -> str:
+    return (f'<div class="chat-head"><img src="{AVATAR}"><div><b>{COACH_NAME} 🌿</b>'
+            f'<span><span class="dot"></span>{status} · your judgement-free coach</span></div></div>')
+
+
+def chat_window(messages: list[dict], typing: bool = False, header: bool = False,
+                day_label: str | None = None, status: str = "online", pop_from: int | None = None) -> str:
+    """The conversation, flowing on the page (no frame)."""
+    head = chat_header(status) if header else ""
+    return f'{head}<div class="chat-flow">{chat_html(messages, typing, day_label, pop_from)}</div>'
+
+
+def scroll_to_bottom() -> None:
+    """Scroll the page down to the newest message."""
+    import streamlit.components.v1 as components
+    components.html(
+        """<script>
+        const d = window.parent.document;
+        const el = d.querySelector('[data-testid="stMain"]') || d.querySelector('section.main') || d.scrollingElement;
+        setTimeout(() => { el.scrollTo({top: el.scrollHeight, behavior: 'smooth'});
+                           window.parent.scrollTo({top: d.body.scrollHeight, behavior: 'smooth'}); }, 150);
+        </script>""",
+        height=0,
+    )
 
 
 def coach_bubbles(text: str) -> list[dict]:
