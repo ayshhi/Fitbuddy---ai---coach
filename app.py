@@ -19,7 +19,7 @@ import samsung
 import storage
 import ui
 
-st.set_page_config(page_title="FitBuddy - AI Health Coach", page_icon="🌿", layout="centered")
+st.set_page_config(page_title="FitBuddy - AI Health Coach", page_icon="🌿", layout="wide")
 ui.inject_css()
 ui.inject_card_css()
 ui.inject_page_css()
@@ -344,15 +344,19 @@ elif page == "📊 Progress":
             where.markdown(ui.chart_card(title, sub, body), unsafe_allow_html=True)
 
         chart("weight_kg", "⚖️ Weight", "kg", per_period=False, decimals=1, data=all_weights)
-        a, b = st.columns(2)
-        chart("workout_min", "🚶‍♀️ Walking minutes", "min", how="sum", where=a)
-        chart("workout_km", "📍 Distance walked", "km", how="sum", decimals=1, where=b)
-        a, b = st.columns(2)
-        chart("steps", "👟 Daily steps", "steps", where=a)
-        chart("sleep_hours", "😴 Sleep", "h", decimals=1, where=b)
-        a, b = st.columns(2)
-        chart("calories", "🍽️ Calories eaten", "kcal", where=a)
-        chart("water", "💧 Water", "glasses", decimals=1, where=b)
+        # the other charts sit side by side in pairs; only the ones with data are shown, so there are no gaps
+        specs = [("workout_min", "🚶‍♀️ Walking minutes", "min", "sum", 0),
+                 ("workout_km", "📍 Distance walked", "km", "sum", 1),
+                 ("steps", "👟 Daily steps", "steps", "mean", 0),
+                 ("sleep_hours", "😴 Sleep", "h", "mean", 1),
+                 ("calories", "🍽️ Calories eaten", "kcal", "mean", 0),
+                 ("water", "💧 Water", "glasses", "mean", 1)]
+        specs = [sp for sp in specs if not col(sp[0]).empty]
+        for i in range(0, len(specs), 2):
+            pair = specs[i:i + 2]
+            cols = st.columns(2) if len(pair) == 2 else [st]
+            for where, (name, title, unit, how, dec) in zip(cols, pair):
+                chart(name, title, unit, how=how, decimals=dec, where=where)
 
         st.caption("Steps only count while your phone is with you, so walking sessions show your effort best. "
                    "Quieter weeks are part of the journey too. 💜")

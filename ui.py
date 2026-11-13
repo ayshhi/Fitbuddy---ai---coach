@@ -42,8 +42,8 @@ CSS = """
 /* Text and layout grow with the screen, so big / high-resolution monitors aren't tiny */
 html { font-size: clamp(17px, 1.05vw, 30px); }
 .stApp { overflow-x: hidden; }
-.block-container { padding-top: 2.2rem; padding-left: 2rem; padding-right: 2rem;
-                   max-width: min(58rem, 96vw) !important; margin: 0 auto; }
+.block-container { padding-top: 2.2rem; padding-left: 3rem; padding-right: 3rem;
+                   max-width: 100% !important; margin: 0 auto; }
 section[data-testid="stSidebar"] { min-width: 15rem !important; }
 section[data-testid="stSidebar"] * { font-size: 1rem; }
 .stApp p, .stApp label, .stApp li, .stApp input, .stApp textarea, .stApp button { font-size: 1rem !important; }
@@ -86,7 +86,7 @@ div[data-testid="stMetric"] {
 .av { width:2.1rem; height:2.1rem; flex-shrink:0; border-radius:50%; }
 .av img { width:100%; height:100%; border-radius:50%; background:#E7F4EC; }
 .bubble {
-  position:relative; max-width: 72%; padding: .6rem .9rem; border-radius: 1.1rem;
+  position:relative; max-width: 60%; padding: .6rem .9rem; border-radius: 1.1rem;
   font-size: 1rem; line-height: 1.5; overflow-wrap:anywhere;
 }
 .row.coach .bubble { background:#FFFFFF; color:var(--ink); border:1px solid #EEE6F8;
@@ -244,7 +244,7 @@ CARD_CSS = """
 .fb-card .title { font-weight:700; color:var(--purple-dark); margin-bottom:.2rem; }
 .fb-card .sub { color:var(--muted); font-size:.9rem !important; }
 .water { font-size:1.5rem; letter-spacing:.1rem; }
-.badges { display:grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap:.6rem; }
+.badges { display:grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap:.7rem; }
 .badge { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:14px; padding:.7rem .5rem; text-align:center; }
 .badge .e { font-size:2rem; line-height:2.4rem; }
 .badge .n { font-weight:700; font-size:.85rem !important; color:var(--ink); }
