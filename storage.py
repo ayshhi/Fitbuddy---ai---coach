@@ -257,3 +257,17 @@ def save_seen_badges(names: list[str]) -> None:
     g = _garden()
     g["seen_badges"] = sorted(set(names))
     _write(GARDEN_FILE, g)
+
+
+
+# ---------- Walk challenge and friends ----------
+
+CHALLENGE_FILE = DATA_DIR / "challenge.json"
+
+
+def load_challenge() -> dict:
+    return _read(CHALLENGE_FILE, {})
+
+
+def save_challenge(data: dict) -> None:
+    _write(CHALLENGE_FILE, data)

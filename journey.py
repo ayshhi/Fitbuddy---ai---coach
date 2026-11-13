@@ -70,7 +70,7 @@ def consistency_points(rows: dict) -> int:
         pts += 2 if r.get("checked_in") else 0
         pts += 1 if float(r.get("workout_min", 0) or 0) >= 15 else 0
         pts += 1 if float(r.get("sleep_hours", 0) or 0) >= 7 else 0
-        pts += 1 if int(r.get("water", 0) or 0) >= 8 else 0
+        pts += min(int(r.get("water", 0) or 0), 8) * 0.25  # every glass you water Tulsi with counts
     pts += storage.count_meals() + 2 * len(storage.load_wins())
     return pts
 
@@ -184,3 +184,48 @@ def badges(profile: dict, rows: dict | None = None) -> list[dict]:
         b("🏆", "15 kg down", "Lose 15 kg", lost >= 15),
         b("🌸", "Full bloom", "Reach your goal weight", goal_pct >= 100),
     ]
+
+
+# ---------------- PCOS symptoms ----------------
+
+SYMPTOMS = {"acne": "Acne", "hair_fall": "Hair fall", "bloating": "Bloating", "cramps": "Cramps",
+            "cravings": "Cravings", "fatigue": "Fatigue", "low_mood": "Low mood"}
+LEVELS = ["None", "Mild", "Moderate", "Strong"]
+
+
+def symptom_days() -> dict:
+    """{date: {symptom: 0-3}} from check-ins."""
+    return {d: c["symptoms"] for d, c in storage.load_checkins().items() if c.get("symptoms")}
+
+
+def symptom_insights(min_days: int = 3) -> list[str]:
+    """Simple, honest patterns: compares average symptom levels between two groups of days,
+    and only reports a difference when both groups have enough days."""
+    days = symptom_days()
+    if len(days) < min_days * 2:
+        return []
+    checkins = storage.load_checkins()
+    rows = all_days()
+    groups = {
+        "after low sleep (under 6.5 h)": lambda d: float(rows.get(d, {}).get("sleep_hours", 0) or 0) and float(rows[d]["sleep_hours"]) < 6.5,
+        "on high-stress days (4-5)": lambda d: int(checkins.get(d, {}).get("stress", 0) or 0) >= 4,
+        "in the week before your period": lambda d: (cycle_info(date.fromisoformat(d)) or {}).get("phase") == "Luteal",
+        "during your period": lambda d: (cycle_info(date.fromisoformat(d)) or {}).get("phase") == "Period",
+    }
+    found = []
+    for label, test in groups.items():
+        inside = [d for d in days if test(d)]
+        outside = [d for d in days if not test(d)]
+        if len(inside) < min_days or len(outside) < min_days:
+            continue
+        for key, name in SYMPTOMS.items():
+            a = mean(days[d].get(key, 0) for d in inside)
+            b = mean(days[d].get(key, 0) for d in outside)
+            if a - b >= 0.7:
+                found.append(f"{name} tends to be worse {label} ({LEVELS[round(a)].lower()} vs {LEVELS[round(b)].lower()}).")
+    return found
+
+
+def daily_km(rows: dict) -> dict:
+    """km walked per day: the larger of the day's total distance and its recorded walks."""
+    return {d: max(float(r.get("distance_km", 0) or 0), float(r.get("workout_km", 0) or 0)) for d, r in rows.items()}

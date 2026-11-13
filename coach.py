@@ -242,7 +242,7 @@ def samsung_to_text(daily: dict) -> str:
 
 def journey_to_text(profile: dict) -> str:
     """Cycle phase, water, wins, badges and Tulsi's growth, so the coach can mention them."""
-    from datetime import date
+    from datetime import date, timedelta
     import journey
     import storage
     rows = journey.all_days()
@@ -262,6 +262,18 @@ def journey_to_text(profile: dict) -> str:
     earned = [b["name"] for b in journey.badges(profile, rows) if b["earned"]]
     if earned:
         lines.append(f"- Badges earned: {', '.join(earned)}")
+    recent_sym = {d: v for d, v in journey.symptom_days().items()
+                  if d >= (date.today() - timedelta(days=7)).isoformat()}
+    if recent_sym:
+        worst = {}
+        for v in recent_sym.values():
+            for k, lvl in v.items():
+                worst[k] = max(worst.get(k, 0), int(lvl))
+        listed = [f"{journey.SYMPTOMS[k]} ({journey.LEVELS[l].lower()})" for k, l in worst.items() if l > 0 and k in journey.SYMPTOMS]
+        if listed:
+            lines.append("- PCOS symptoms logged this week: " + ", ".join(listed))
+    for insight in journey.symptom_insights()[:3]:
+        lines.append(f"- Pattern noticed: {insight}")
     wins = storage.load_wins()[-5:]
     if wins:
         lines.append("- Recent non-scale wins: " + "; ".join(f"{w['emoji']} {w['text']}" for w in wins))
@@ -343,7 +355,20 @@ QUICK_ACTIONS = {
         "Message 3: ONE small, realistic goal for next week. Message 4: a warm closing line." + PLAN_RULES
     ),
     "🛒 Grocery list": "",  # filled in by grocery_request() with the latest meal plan
+    "🆘 Craving SOS": "",   # filled in by craving_request()
 }
+
+CRAVINGS = ["🍫 Something sweet", "🍟 Fried or salty", "🍚 Rice or carbs", "🥤 A cold drink", "😩 I'm just stressed or bored"]
+
+
+def craving_request(kind: str = "", note: str = "") -> str:
+    what = kind or "something"
+    extra = f" Details: {note}." if note else ""
+    return (f"Craving SOS! I'm craving {what} right now.{extra} Help me kindly in 3 short messages: "
+            "1) a quick healthier swap I can make at home or buy nearby (Indian options), "
+            "2) a 2-minute distraction I can do right now, "
+            "3) a reminder that it's completely okay if I still eat it, and how to enjoy it mindfully. "
+            "If the craving might be linked to my cycle phase, sleep or stress, mention it gently.")
 
 
 def grocery_request(history: list[dict]) -> str:

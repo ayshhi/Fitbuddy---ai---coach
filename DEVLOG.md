@@ -124,6 +124,21 @@ I didn't like the first layout, and the coach's long paragraphs felt like readin
 - Checked `git status` before the first push, to make sure `.env` (keys), `data` (health data)
   and `venv` were not included.
 
+## Step 10: More testing and more features (afternoon, 13 Nov)
+
+- **Chat redesign:** I didn't like that the chat copied WhatsApp, so it now flows on the page with pop-in bubbles
+  and a message bar that stays at the bottom. Fixed a bug where the typing bubble stayed stuck after a check-in.
+- **Layout:** switched to a full-width layout and bigger text, because content only used the middle of my screen.
+  Progress charts now only show when there's data, so there are no empty gaps.
+- **Tulsi mascot:** she bounces in the corner, waves a leaf, and smiles with hearts when clicked.
+- **Watering Tulsi:** each glass of water I log waters her (with an animation), and counts towards her growth.
+- **Tulsi's Garden Path:** a snakes-and-ladders walking game without snakes, because sliding back is a punishment.
+  Ladders unlock with healthy habits. Friends join with a "friend code" I share on WhatsApp, because a live
+  online version would need a server and would put health data online.
+- **Share card:** a progress image to share, with weight hidden by default.
+- **Craving SOS, PCOS symptom tracker and doctor report PDF:** practical tools for living with PCOS.
+  Symptom patterns are only reported when there are enough days on both sides to compare.
+
 ---
 
 ## What I learned

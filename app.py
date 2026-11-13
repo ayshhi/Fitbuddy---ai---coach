@@ -11,6 +11,8 @@ from pypdf import PdfReader
 
 import pandas as pd
 
+import cards
+import challenge
 import coach
 import food
 import garden
@@ -32,10 +34,21 @@ def show_error(err: Exception) -> None:
 # ---------------- Sidebar navigation ----------------
 
 ui.sidebar_brand()
-page = st.sidebar.radio(
-    "Go to", ["🏠 Today", "💬 Chat with Tulsi", "🌸 My garden", "📸 Food scan", "📊 Progress", "🩺 Health profile"],
-    label_visibility="collapsed",
-)
+PAGES = ["🏠 Today", "💬 Chat with Tulsi", "🌸 My garden", "🎲 Walk challenge", "📸 Food scan", "📊 Progress",
+         "🩺 Health profile"]
+page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
+
+
+def go_to_chat(message: str, **extra) -> None:
+    """Button callback: open the chat and send a message there."""
+    st.session_state.nav = "💬 Chat with Tulsi"
+    st.session_state.pending = message
+    st.session_state.update(extra)
+
+
+def water_tulsi(day: str) -> None:
+    storage.set_water(day, storage.water_today(day) + 1)
+    st.session_state.watered = True
 show_tulsi = st.sidebar.toggle("🌿 Tulsi on screen", value=True, key="show_tulsi")
 st.sidebar.divider()
 st.sidebar.caption(
@@ -78,8 +91,10 @@ if page == "🏠 Today":
 
     today_str = date.today().isoformat()
     left, right = st.columns([1, 2])
+    glasses = storage.water_today(today_str)
     with left:
-        st.markdown(garden.tulsi_img(_growth["stage"], "9rem"), unsafe_allow_html=True)
+        st.markdown(garden.tulsi_img(_growth["stage"], "10rem", fresh=glasses >= 8,
+                                     watering=st.session_state.pop("watered", False)), unsafe_allow_html=True)
         st.markdown(f"<div style='text-align:center'><b>{_growth['emoji']} {_growth['name']}</b></div>",
                     unsafe_allow_html=True)
     with right:
@@ -92,17 +107,21 @@ if page == "🏠 Today":
             st.markdown(ui.card("🌙 Cycle-aware tips", "Tick <b>My period started today</b> in your check-in "
                                 "(or add dates in 🩺 Health profile) and Tulsi will tailor advice to your cycle."),
                         unsafe_allow_html=True)
-        glasses = storage.water_today(today_str)
+        fresh_note = " Tulsi's leaves are sparkling! ✨" if glasses >= 8 else " Each glass you drink waters Tulsi too."
         st.markdown(ui.card(f"💧 Water today: {glasses} / 8 glasses",
-                            f"<span class='water'>{'💧' * min(glasses, 8)}{'🤍' * max(0, 8 - glasses)}</span>"),
+                            f"<span class='water'>{'💧' * min(glasses, 8)}{'🤍' * max(0, 8 - glasses)}</span><br>{fresh_note}"),
                     unsafe_allow_html=True)
-        w1, w2, _ = st.columns([1, 1, 2])
-        if w1.button("➕ Glass", key="water_add"):
-            storage.set_water(today_str, glasses + 1)
-            st.rerun()
-        if w2.button("➖", key="water_remove"):
+        w1, w2, _ = st.columns([2, 1, 3])
+        w1.button("💧 I drank a glass: water Tulsi", key="water_add", on_click=water_tulsi, args=(today_str,))
+        if w2.button("➖", key="water_remove", help="Remove a glass"):
             storage.set_water(today_str, glasses - 1)
             st.rerun()
+
+        with st.expander("🆘 Craving SOS: having a craving right now?"):
+            kind = st.radio("What are you craving?", coach.CRAVINGS, horizontal=True, key="crave_kind")
+            note = st.text_input("Anything else? (optional)", key="crave_note", placeholder="e.g. it's 10 pm and I want chocolate")
+            st.button("Help me, Tulsi 💜", type="primary", on_click=go_to_chat,
+                      args=(f"🆘 Craving SOS: {kind}",), kwargs={"craving": (kind, note)})
 
     if not profile:
         st.info("Tip: fill in your **🩺 Health profile** first so your coach can personalise advice.")
@@ -149,6 +168,13 @@ if page == "🏠 Today":
         mood = st.radio("Mood", moods, index=moods.index(existing["mood"]) if existing.get("mood") in moods else 1, horizontal=True)
         notes = st.text_area("Anything else? (cravings, period, how you're feeling...)", existing.get("notes", ""))
         period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
+        st.markdown("**🌡️ PCOS symptoms today** (optional, helps Tulsi spot patterns)")
+        old_sym = existing.get("symptoms", {})
+        sym_cols = st.columns(4)
+        symptoms = {}
+        for i, (key, label) in enumerate(journey.SYMPTOMS.items()):
+            symptoms[key] = journey.LEVELS.index(sym_cols[i % 4].select_slider(
+                label, journey.LEVELS, value=journey.LEVELS[int(old_sym.get(key, 0))], key=f"sym_{key}"))
 
         submitted = st.form_submit_button("Save & get my coach's feedback ✨", type="primary")
 
@@ -160,6 +186,7 @@ if page == "🏠 Today":
             "calories": calories, "exercise": exercise, "exercise_minutes": exercise_minutes,
             "stress": stress, "energy": energy, "mood": mood, "notes": notes,
             "foods": storage.day_foods(day), "weight_kg": weight_kg or None,
+            "symptoms": {k: v for k, v in symptoms.items() if v} or None,
         })
         st.success("Check-in saved! 🎉")
 
@@ -207,6 +234,93 @@ if page == "🏠 Today":
 
 
 # ---------------- Page: Food scan ----------------
+
+elif page == "🎲 Walk challenge":
+    ui.hero("🎲", "Tulsi's Garden Path", "A walking game with ladders and no snakes. Every km moves you forward 💜")
+    ch = storage.load_challenge()
+    prog = challenge.my_progress()
+
+    if not prog:
+        st.markdown(ui.card("How it works",
+            "👟 Every <b>1 km</b> you walk moves you <b>1 square</b>.<br>"
+            "🪜 <b>Ladders</b> jump you ahead once you unlock them with a healthy habit: 💧 8 glasses of water in a day, "
+            "😴 a 7+ hour night, 🔥 a 3-day check-in streak, 📸 scanning a meal.<br>"
+            "🌿 <b>No snakes.</b> Nothing ever sends you backwards.<br>"
+            "👯 <b>Friends:</b> share your friend code on WhatsApp, paste theirs, and race side by side."),
+            unsafe_allow_html=True)
+        with st.form("new_challenge"):
+            c1, c2 = st.columns(2)
+            my_name = c1.text_input("Your name on the board", profile.get("name", ""))
+            length = c2.select_slider("Challenge length", [20, 30, 40, 50], value=30, format_func=lambda v: f"{v} km")
+            if st.form_submit_button("🎲 Start my challenge today", type="primary"):
+                storage.save_challenge({"start": date.today().isoformat(), "length": length,
+                                        "name": my_name or "Me", "friends": ch.get("friends", {})})
+                st.rerun()
+    else:
+        friends = list(ch.get("friends", {}).values())
+        players = [{"name": f["name"], "pos": f["pos"], "km": f["km"]} for f in friends]
+        players.append({"name": prog["name"], "pos": prog["pos"], "km": prog["km"], "me": True})
+
+        if prog["finished"]:
+            st.balloons()
+            st.success(f"🌸 You finished the {prog['length']} km Garden Path! Tulsi is so proud of you!")
+        locked = [l for l in challenge.ladders_for(prog["length"]) if l["habit"] not in prog["done"]]
+        st.markdown(ui.tiles([
+            ("📍 MY SQUARE", f"{prog['pos']} / {prog['length']}", f"started {date.fromisoformat(prog['start']).strftime('%d %b')}"),
+            ("👟 WALKED", f"{prog['km']} km", "since the start"),
+            ("🪜 LADDERS", f"{len(prog['climbed'])} climbed", " ".join(prog["climbed"]) or "unlock one below"),
+            ("👯 FRIENDS", f"{len(friends)}", "on your board"),
+        ]), unsafe_allow_html=True)
+
+        st.markdown(ui.chart_card("Your board", "Green ladders are unlocked · hover a token to see who it is",
+                                  challenge.board_svg(prog["length"], players, prog["pos"], prog["done"])),
+                    unsafe_allow_html=True)
+        legend = " &nbsp; ".join(
+            f"<span style='display:inline-block;width:.9rem;height:.9rem;border-radius:50%;background:"
+            f"{'#7B3FBF' if p.get('me') else challenge.TOKEN_COLORS[i % len(challenge.TOKEN_COLORS)]};"
+            f"vertical-align:middle'></span> {ui.html.escape(p['name'])} ({p['km']} km)"
+            for i, p in enumerate(players))
+        st.markdown(legend, unsafe_allow_html=True)
+        if locked:
+            st.caption("🔒 Still to unlock: " + " · ".join(f"{l['emoji']} {l['desc']}" for l in locked))
+
+        st.markdown('<div class="section-label">Play with friends</div>', unsafe_allow_html=True)
+        f1, f2 = st.columns(2)
+        with f1:
+            st.markdown("**Your friend code**: copy it and send it on WhatsApp")
+            st.code(challenge.make_code(prog["name"], prog), language=None)
+            st.caption("Send a fresh code whenever you've walked more. Only your name, square and km are shared.")
+        with f2:
+            with st.form("add_friend", clear_on_submit=True):
+                code = st.text_input("Paste a friend's code", placeholder="TULSI-...")
+                if st.form_submit_button("➕ Add / update friend"):
+                    try:
+                        challenge.save_friend(challenge.read_code(code))
+                        st.rerun()
+                    except Exception:
+                        st.error("That code doesn't look right. It should start with TULSI-")
+            with st.expander("Friend doesn't have the app? Add them by hand"):
+                with st.form("manual_friend", clear_on_submit=True):
+                    m1, m2 = st.columns(2)
+                    fname = m1.text_input("Friend's name")
+                    fkm = m2.number_input("km they've walked", 0.0, 500.0, 0.0, 0.5)
+                    if st.form_submit_button("Save") and fname.strip():
+                        challenge.save_friend({"name": fname.strip()[:20], "pos": int(fkm), "km": fkm,
+                                               "updated": date.today().isoformat(), "manual": True})
+                        st.rerun()
+        for f in friends:
+            r1, r2 = st.columns([6, 1])
+            r1.write(f"👤 **{f['name']}**: square {f['pos']}, {f['km']} km"
+                     f"{' (added by hand)' if f.get('manual') else ''} · updated {f.get('updated', '')}")
+            if r2.button("Remove", key=f"rmf_{f['name']}"):
+                challenge.remove_friend(f["name"])
+                st.rerun()
+
+        with st.expander("⚙️ Challenge options"):
+            if st.button("🔄 Start a new challenge"):
+                storage.save_challenge({"friends": ch.get("friends", {})})
+                st.rerun()
+
 
 elif page == "📸 Food scan":
     ui.hero("📸", "Food scan", "Snap your meal and Tulsi will estimate what's on your plate. No judgement, just info 💜")
@@ -367,6 +481,21 @@ elif page == "📊 Progress":
         with st.expander("📋 See the data as a table"):
             st.dataframe(df.sort_index(ascending=False))
 
+    # ----- PCOS symptom patterns -----
+    sym_days = journey.symptom_days()
+    if sym_days:
+        st.markdown('<div class="section-label">PCOS symptom patterns</div>', unsafe_allow_html=True)
+        insights = journey.symptom_insights()
+        if insights:
+            for text in insights:
+                st.markdown(ui.card("🔎 Pattern spotted", ui.html.escape(text)), unsafe_allow_html=True)
+        else:
+            st.caption(f"You've logged symptoms on {len(sym_days)} day(s). After about a week, Tulsi starts spotting "
+                       "patterns with your sleep, stress and cycle.")
+
+    st.download_button("🩺 Download a health summary for my doctor (PDF)", cards.doctor_report(profile),
+                       file_name=f"health_summary_{date.today().isoformat()}.pdf", mime="application/pdf")
+
     # ----- Adding data -----
     st.markdown('<div class="section-label">Add your data</div>', unsafe_allow_html=True)
     with st.expander("📥 Import Samsung Health data", expanded=not storage.load_samsung()):
@@ -415,7 +544,11 @@ elif page == "🌸 My garden":
     g = _growth
     left, right = st.columns([1, 1])
     with left:
-        st.markdown(garden.tulsi_img(g["stage"], "16rem"), unsafe_allow_html=True)
+        g_glasses = storage.water_today(date.today().isoformat())
+        st.markdown(garden.tulsi_img(g["stage"], "16rem", fresh=g_glasses >= 8,
+                                     watering=st.session_state.pop("watered", False)), unsafe_allow_html=True)
+        st.button(f"💧 Water Tulsi ({g_glasses}/8 glasses today)", key="garden_water",
+                  on_click=water_tulsi, args=(date.today().isoformat(),))
     with right:
         st.markdown(f"### {g['emoji']} {g['name']}")
         st.write(g["message"])
@@ -432,6 +565,19 @@ elif page == "🌸 My garden":
                     "with your journey.")
         st.caption("Tulsi grows from your progress *and* your effort: check-ins, walks, good sleep, water, "
                    "food scans and wins. She never shrinks or wilts. Bad days just pause her growth. 💜")
+
+    st.divider()
+    st.subheader("📤 Share my progress")
+    st.caption("Make a pretty card to share on WhatsApp or Instagram. You choose what's on it.")
+    s1, s2, s3 = st.columns([2, 2, 3])
+    show_weight = s1.toggle("Show kg lost", value=False, help="Off by default. Your weight is your business.")
+    show_win = s2.toggle("Show my latest win", value=True)
+    card_png = cards.share_card(profile, show_weight=show_weight, show_win=show_win)
+    with s3:
+        st.download_button("⬇️ Download my share card", card_png, file_name="my_fitbuddy_progress.png",
+                           mime="image/png", type="primary")
+    with st.expander("👀 Preview my card"):
+        st.image(card_png, width=360)
 
     st.divider()
     earned = [b for b in journey.badges(profile, _rows) if b["earned"]]
@@ -489,8 +635,8 @@ elif page == "💬 Chat with Tulsi":
                 if st.button(label, key=f"qa_{label}"):
                     st.session_state.pending = label
             st.markdown("**Quick help**")
-            for label in ["⏱️ 10-min home workout", "😔 I'm feeling unmotivated", "😴 Tips for better sleep",
-                          "📬 My weekly report"]:
+            for label in ["🆘 Craving SOS", "⏱️ 10-min home workout", "😔 I'm feeling unmotivated",
+                          "😴 Tips for better sleep", "📬 My weekly report"]:
                 if st.button(label, key=f"qb_{label}"):
                     st.session_state.pending = label
 
@@ -519,6 +665,9 @@ elif page == "💬 Chat with Tulsi":
         msg = {"role": "user", "content": prompt, "time": ui.now_time()}
         if prompt == "🛒 Grocery list":
             msg["ask"] = coach.grocery_request(chat)
+        elif prompt.startswith("🆘 Craving SOS"):
+            kind, note = st.session_state.pop("craving", ("", ""))
+            msg["ask"] = coach.craving_request(kind, note)
         elif prompt in coach.QUICK_ACTIONS:
             msg["ask"] = coach.QUICK_ACTIONS[prompt]
         chat.append(msg)
@@ -620,6 +769,10 @@ else:
             })
             storage.save_profile(profile)
             st.success("Profile saved! Your coach will now use it. 🌱")
+
+    st.download_button("🩺 Download a health summary for my doctor (PDF)", cards.doctor_report(profile),
+                       file_name=f"health_summary_{date.today().isoformat()}.pdf", mime="application/pdf",
+                       key="doc_report_profile")
 
     # ----- Cycle tracking -----
     st.divider()

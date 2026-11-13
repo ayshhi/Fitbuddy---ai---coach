@@ -65,7 +65,15 @@ def _flower(cx, cy, open_=True):
     return petals + f'<circle cx="{cx}" cy="{cy}" r="10" fill="#F7C548"/><circle cx="{cx - 3}" cy="{cy - 3}" r="3" fill="#FBE29A"/>' + sparkles
 
 
-def tulsi_svg(stage: int) -> str:
+DEW = "".join(
+    f'<path d="M{x} {y - 8} C{x + 5.5} {y} {x + 5.5} {y + 5} {x} {y + 6} C{x - 5.5} {y + 5} {x - 5.5} {y} {x} {y - 8}Z" '
+    f'fill="#7CC4F5" stroke="#FFFFFF" stroke-width="1"/>'
+    for x, y in [(70, 150), (132, 160), (60, 118), (146, 112), (128, 84)]
+)
+
+
+def tulsi_svg(stage: int, fresh: bool = False) -> str:
+    """fresh=True adds shiny water drops (after you've had 8 glasses today)."""
     stage = max(0, min(5, int(stage)))
     parts = [POT]
     if stage == 0:  # seed peeking out of the soil
@@ -93,10 +101,44 @@ def tulsi_svg(stage: int) -> str:
         if stage == 5:
             parts.append(_flower(100, top - 8, open_=True))
         parts.append(_body())
+    if fresh:
+        parts.append(DEW)
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 262">'
             + "".join(parts) + "</svg>")
 
 
-def tulsi_img(stage: int, size: str = "12rem") -> str:
-    data = base64.b64encode(tulsi_svg(stage).encode()).decode()
-    return f'<img src="data:image/svg+xml;base64,{data}" style="width:{size};height:auto;display:block;margin:0 auto">'
+CAN_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80"><g transform="translate(120 0) scale(-1 1)">
+  <path d="M20 30 h52 a6 6 0 0 1 6 6 v30 a8 8 0 0 1 -8 8 h-48 a8 8 0 0 1 -8 -8 v-30 a6 6 0 0 1 6 -6z" fill="#9B6BD6"/>
+  <path d="M30 30 q16 -26 34 0" stroke="#7B3FBF" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M78 46 L112 22 L116 28 L84 56 Z" fill="#9B6BD6"/>
+  <ellipse cx="114" cy="24" rx="5" ry="7" fill="#7B3FBF" transform="rotate(-35 114 24)"/>
+  <path d="M28 44 h36" stroke="#C9A8F0" stroke-width="4" stroke-linecap="round"/>
+</g></svg>"""
+
+WATER_CSS = """<style>
+.tulsi-pot { position: relative; margin: 0 auto; }
+.tulsi-pot .can { position:absolute; top:-10%; right:-30%; width:58%; transform-origin: 85% 85%;
+                  animation: can-tilt 2.4s ease-in-out both; }
+.tulsi-pot .drop { position:absolute; width:.55rem; height:.8rem; background:#7CC4F5; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                   opacity:0; animation: drop-fall 1.1s ease-in infinite; animation-iteration-count: 2; }
+.tulsi-pot .thanks { position:absolute; top:-12%; left:50%; transform:translateX(-50%); white-space:nowrap;
+                     background:#FFFFFF; border:1px solid #E6DDF3; border-radius:99px; padding:.2rem .7rem; font-weight:700;
+                     color:#4E2A84; font-size:.85rem; box-shadow:0 4px 14px rgba(78,42,132,.15); animation: thanks 2.6s ease both; }
+@keyframes can-tilt { 0% { opacity:0; transform: translateY(-20px) rotate(0); } 15% { opacity:1; transform: rotate(0); }
+  30%, 80% { transform: rotate(-30deg); } 100% { opacity:0; transform: rotate(0); } }
+@keyframes drop-fall { 0% { opacity:0; transform: translateY(0); } 15% { opacity:1; } 100% { opacity:0; transform: translateY(5.5rem); } }
+@keyframes thanks { 0%, 40% { opacity:0; transform: translate(-50%, 8px); } 55%, 90% { opacity:1; transform: translate(-50%, 0); } 100% { opacity:0; } }
+</style>"""
+
+
+def tulsi_img(stage: int, size: str = "12rem", fresh: bool = False, watering: bool = False) -> str:
+    data = base64.b64encode(tulsi_svg(stage, fresh).encode()).decode()
+    img = f'<img src="data:image/svg+xml;base64,{data}" style="width:100%;height:auto;display:block">'
+    if not watering:
+        return f'<div class="tulsi-pot" style="width:{size}">{img}</div>'
+    can = base64.b64encode(CAN_SVG.encode()).decode()
+    drops = "".join(f'<span class="drop" style="left:{x}%;top:{y}%;animation-delay:{d}s"></span>'
+                    for x, y, d in [(46, 12, .5), (54, 8, .7), (62, 14, .9), (50, 18, 1.1), (58, 10, 1.3)])
+    return (f'{WATER_CSS}<div class="tulsi-pot" style="width:{size}">{img}'
+            f'<img class="can" src="data:image/svg+xml;base64,{can}">{drops}'
+            f'<div class="thanks">Thank you! 💧</div></div>')

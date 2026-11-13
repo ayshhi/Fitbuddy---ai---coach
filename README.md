@@ -23,6 +23,14 @@ and my cycle became regular again.
 - **💜 Non-scale wins journal**: "my jeans fit again", "more energy"...
 - **📬 Weekly report**, **🛒 grocery list from your meal plan**, and a **💧 water tracker**.
 
+- **💧 Water Tulsi**: every glass you drink waters Tulsi, with a watering-can animation. After 8 glasses her leaves sparkle with dewdrops.
+- **🎲 Tulsi's Garden Path**: a snakes-and-ladders walking game with **no snakes**. Every km moves you a square, ladders unlock with healthy habits, and you can race friends using shareable friend codes (no server, no health data shared).
+- **📤 Share card**: a downloadable progress image for WhatsApp or Instagram. You choose what's shown, and weight is hidden by default.
+- **🆘 Craving SOS**: kind, quick help when a craving hits: a healthier swap, a 2-minute distraction, and no guilt.
+- **🌡️ PCOS symptom tracker**: log acne, hair fall, bloating, cramps, cravings, fatigue and mood. FitBuddy spots patterns with sleep, stress and cycle phase.
+- **🩺 Doctor report**: a one-page PDF summary of weight, cycle, sleep, activity and symptoms for appointments.
+- **🌿 Tulsi mascot**: bounces in the corner, waves, and smiles with floating hearts when you click her.
+
 ## Responsible AI design
 - Looks at the whole week. It never tells you to "burn off" food with exercise.
 - Suggests gentle movement on low-sleep or high-stress days.
