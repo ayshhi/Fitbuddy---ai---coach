@@ -9,13 +9,27 @@ sleep, stress and cycle phase.
 ## Why I built it
 
 I went from 80 kg to 63 kg in about a year, at home, with AI as my coach. I have PCOS and was on medication from
-2018 to February 2026; after losing the weight, my cycle became regular again. What actually helped me was very
-specific: a 15-minute warm-up of squat jumps, mountain climbers and skipping rope, planks, lunges and squats,
-a planned diet, and knowing roughly how many calories each workout burned.
+2018 to February 2026; after losing the weight, my cycle became regular again.
+
+What worked for me was simple and specific: a **15-minute warm-up every morning** (squat jumps, mountain climbers,
+skipping rope), **more cardio in the evening**, along with strength moves like planks, lunges and squats, and a **planned diet**
+with a calorie deficit. Together, they helped me lose weight I once thought was impossible to lose.
 
 I also know what it feels like to be body-shamed, and how stress and poor sleep raise cortisol and make weight
 harder to lose. Most fitness apps ignore all of that. FitBuddy is the coach I wish I'd had: specific, encouraging,
 and aware of PCOS.
+
+### Where the idea came from
+
+<p align="center"><img src="screenshots/chat.jpeg" alt="A real conversation with AI about my food" width="320"></p>
+
+Every day for the past year, I had conversations like this one with AI: what I ate and how many calories it was,
+which exercises wouldn't spike my cortisol, and how big my calorie deficit should be. Through these conversations
+I achieved something I thought was impossible.
+
+But I had to do it all by hand: typing out every meal, asking the same questions again, and keeping track of
+everything myself. FitBuddy turns that daily routine into an app. It remembers my profile, cycle and progress,
+plans my workouts and meals, and gives the same kind, specific help, without starting from scratch every day.
 
 ![Today page](screenshots/today.png)
 
