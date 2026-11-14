@@ -556,16 +556,19 @@ def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
           m.innerHTML = '<div class="t-bubble"></div><span class="t-heart">💜</span><span class="t-heart">🌸</span>'
                       + '<span class="t-heart">💜</span>' + {json.dumps(MASCOT_SVG)};
           d.body.appendChild(m);
-          m.addEventListener('click', () => {{
-            const cheers = JSON.parse(m.dataset.cheers || '[]');
-            const b = m.querySelector('.t-bubble');
-            m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');
-            b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';
-            b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
-            clearTimeout(m._t);
-            m._t = setTimeout(() => {{ m.classList.remove('happy'); b.textContent = m.dataset.hello; }}, 3000);
-          }});
         }}
+        // The click code is created in the MAIN page (w.Function), not in this helper frame. Streamlit replaces
+        // this frame on every rerun, and code that belonged to an old frame stops working.
+        const w = window.parent;
+        m.onclick = new w.Function(`
+          const m = this, b = m.querySelector('.t-bubble');
+          const cheers = JSON.parse(m.dataset.cheers || '[]');
+          m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');
+          b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';
+          b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+          clearTimeout(m._t);
+          m._t = setTimeout(() => {{ m.classList.remove('happy'); b.textContent = m.dataset.hello; }}, 3000);
+        `);
         m.dataset.hello = {json.dumps(hello)};
         m.dataset.cheers = {json.dumps(json.dumps(cheers))};
         if (!m.classList.contains('happy')) m.querySelector('.t-bubble').textContent = m.dataset.hello;
