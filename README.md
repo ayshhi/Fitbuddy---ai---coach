@@ -24,7 +24,7 @@ and my cycle became regular again.
 - **📬 Weekly report**, **🛒 grocery list from your meal plan**, and a **💧 water tracker**.
 
 - **💧 Water Tulsi**: every glass you drink waters Tulsi, with a watering-can animation. After 8 glasses her leaves sparkle with dewdrops.
-- **🎲 Tulsi's Garden Path**: a snakes-and-ladders walking game with **no snakes**. Every km moves you a square, ladders unlock with healthy habits, and you can race friends using shareable friend codes (no server, no health data shared).
+- **🎲 Tulsi's Garden Path**: a snakes-and-ladders game with **no snakes**. Choose a challenge: 🌈 *Every step counts* (any healthy action moves you: check-ins, any movement, plan steps, water, sleep, food scans, cravings you rode out), 🧘 movement minutes, 💧 hydration, 😴 sleep, or 🚶 walking km. Ladders unlock with special moments, a feed shows why you moved, and friends race with shareable codes.
 - **📤 Share card**: a downloadable progress image for WhatsApp or Instagram. You choose what's shown, and weight is hidden by default.
 - **🌈 Home page**: Tulsi bouncing under an animated rainbow, with today's status and a "Let's start" button.
 - **🆘 Craving SOS page**: log the craving, how strong it is and what's behind it, then breathe with Tulsi. You get instant Indian swap ideas (no AI needed), can talk it through with Tulsi, and see your patterns by time of day, trigger and cycle phase.

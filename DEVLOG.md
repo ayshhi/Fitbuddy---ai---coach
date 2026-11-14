@@ -171,6 +171,13 @@ I slept on it and asked myself what would stop me using FitBuddy for months, not
 - **The scale can make you quit** → a **7-day average** weight line, and an explanation when weight goes up, using my own
   data (cycle phase, sleep, stress, food, workouts). I remember how discouraging a random +1 kg felt.
 
+- **Garden Path for everyone:** a walking-only game felt unfair on tired, rainy or period days, and ignored yoga and
+  home workouts. Now there are 5 challenge types, and the default, *Every step counts*, moves you forward for any
+  healthy action. A "Your moves" feed shows exactly why you moved. Board sizes show roughly how many days they take,
+  after testing showed a small board finished in under a week.
+- **Plans you can actually see:** after a check-in, the plan card now shows *Tomorrow's plan is ready*, and on a day
+  with no plan, *Make today's plan* asks Tulsi for 3 tiny steps straight away.
+
 ---
 
 ## What I learned

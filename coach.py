@@ -349,6 +349,24 @@ def daily_feedback(profile: dict, checkins: dict, today: str) -> str:
     return call_ai(messages)
 
 
+def plan_for_today(profile: dict, checkins: dict) -> list[str]:
+    """Three tiny steps for today, when there's no plan yet (e.g. the first morning)."""
+    from datetime import date
+    loop = plan_context(date.today().isoformat())
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": build_context(profile, checkins) + ("\n\nPLAN FOLLOW-UP\n" + loop if loop else "")},
+        {"role": "user", "content": (
+            "Make me a tiny plan for TODAY: exactly 3 short, realistic actions (one for movement, one for food, one for "
+            "sleep or rest), adjusted to my recent sleep, stress, cycle phase and how well I follow plans. "
+            "Reply with ONLY one line in this format: PLAN: action one | action two | action three")},
+    ]
+    _, items = extract_plan(call_ai(messages, max_tokens=200, temperature=0.6))
+    if not items:
+        raise CoachError("Tulsi couldn't make a plan just now. Please try again in a minute.")
+    return items
+
+
 def extract_plan(reply: str) -> tuple[str, list[str]]:
     """Splits Tulsi's reply into (text to show, plan items). Falls back to her bullet points."""
     import re

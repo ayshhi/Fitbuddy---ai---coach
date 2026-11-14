@@ -39,7 +39,7 @@ def show_error(err: Exception) -> None:
 
 ui.sidebar_brand()
 PAGES = ["🌈 Home", "🏠 Today", "💬 Chat with Tulsi", "📸 Food scan", "🆘 Craving SOS", "🌡️ Symptoms",
-         "🌸 My garden", "🎲 Walk challenge", "📊 Progress", "🩺 Health profile"]
+         "🌸 My garden", "🎲 Garden Path", "📊 Progress", "🩺 Health profile"]
 page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
 
 
@@ -143,9 +143,10 @@ elif page == "🏠 Today":
     plan_col, tell_col = st.columns([2, 3])
     with plan_col.container(border=True, key="ck_plan"):
         plan = storage.load_plans().get(today_str)
+        tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
+        next_plan = storage.load_plans().get(tomorrow_str)
         ui.card_header("📋", "Today's plan from Tulsi",
-                       "Tick them off as you go" if plan else "Check in tonight and Tulsi makes tomorrow's plan",
-                       tint="#EDE2FB")
+                       "Tick them off as you go" if plan else "3 tiny steps: movement, food and rest", tint="#EDE2FB")
         if plan:
             for i, item in enumerate(plan["items"]):
                 st.checkbox(item["text"], value=item.get("done", False), key=f"plan_{today_str}_{i}",
@@ -156,7 +157,19 @@ elif page == "🏠 Today":
             else:
                 st.caption(f"{done} of {len(plan['items'])} done. Small steps count. 🌱")
         else:
-            st.caption("Tulsi's plans are always 3 tiny steps: one for movement, one for food, one for sleep.")
+            st.caption("No plan for today yet. Tulsi can make one now, or you'll get tomorrow's after tonight's check-in.")
+            if st.button("✨ Make today's plan", type="primary", key="make_plan"):
+                with st.spinner("Tulsi is planning your day..."):
+                    try:
+                        storage.save_plan(today_str, today_str, coach.plan_for_today(profile, storage.recent_checkins(7)))
+                        st.rerun()
+                    except coach.CoachError as err:
+                        show_error(err)
+        if next_plan:
+            st.markdown(ui.card("🌙 Tomorrow's plan is ready",
+                                "<br>".join(f"• {ui.html.escape(i['text'])}" for i in next_plan["items"])
+                                + "<br><span style='font-size:.85rem'>You can tick these off tomorrow.</span>"),
+                        unsafe_allow_html=True)
         ft = journey.follow_through(7)
         if ft["total"]:
             st.caption(f"This week: {ft['done']} of {ft['total']} plan steps done ({ft['rate']:.0%}). "
@@ -482,95 +495,126 @@ elif page == "🌡️ Symptoms":
         st.caption("No symptoms logged yet. Start today, and in a couple of weeks Tulsi can show you what affects them.")
 
 
-elif page == "🎲 Walk challenge":
-    ui.hero("🎲", "Tulsi's Garden Path", "A walking game with ladders and no snakes. Every km moves you forward 💜")
+elif page == "🎲 Garden Path":
+    ui.hero("🎲", "Tulsi's Garden Path", "A game with ladders and no snakes. Every healthy choice moves you forward 💜")
     ch = storage.load_challenge()
     prog = challenge.my_progress()
 
     if not prog:
-        st.markdown(ui.card("How it works",
-            "👟 Every <b>1 km</b> you walk moves you <b>1 square</b>.<br>"
-            "🪜 <b>Ladders</b> jump you ahead once you unlock them with a healthy habit: 💧 8 glasses of water in a day, "
-            "😴 a 7+ hour night, 🔥 a 3-day check-in streak, 📸 scanning a meal.<br>"
-            "🌿 <b>No snakes.</b> Nothing ever sends you backwards.<br>"
-            "👯 <b>Friends:</b> share your friend code on WhatsApp, paste theirs, and race side by side."),
-            unsafe_allow_html=True)
-        with st.form("new_challenge"):
+        ui.section("Pick your challenge", "You can start a new one anytime")
+        kind = st.radio("Challenge type", list(challenge.TYPES), format_func=lambda k: challenge.TYPES[k][0],
+                        horizontal=True, label_visibility="collapsed")
+        name, desc, rules, lengths = challenge.TYPES[kind]
+        with st.container(border=True):
+            st.markdown(f"**{name}**: {desc}")
+            st.markdown('<div class="chips" style="gap:.5rem">' + "".join(
+                f'<span class="chip" style="font-size:.95rem !important;padding:.35rem .8rem">{r}</span>' for r in rules)
+                + "</div>", unsafe_allow_html=True)
+            st.caption("🪜 Ladders jump you ahead for special moments: 🔥 a 3-day streak, 📋 finishing Tulsi's whole plan, "
+                       "📸 a food scan, 💜 a non-scale win. 🌿 No snakes: nothing ever sends you back.")
+        with st.form("new_challenge", border=False):
             c1, c2 = st.columns(2)
             my_name = c1.text_input("Your name on the board", profile.get("name", ""))
-            length = c2.select_slider("Challenge length", [20, 30, 40, 50], value=30, format_func=lambda v: f"{v} km")
+            length = c2.radio("Board size", lengths, horizontal=True, index=min(1, len(lengths) - 1),
+                              format_func=lambda v: f"{v} squares (about {challenge.estimate_days(kind, v)} days)")
             if st.form_submit_button("🎲 Start my challenge today", type="primary"):
-                storage.save_challenge({"start": date.today().isoformat(), "length": length,
+                storage.save_challenge({"start": date.today().isoformat(), "length": length, "type": kind,
                                         "name": my_name or "Me", "friends": ch.get("friends", {})})
                 st.rerun()
     else:
+        name, desc, rules, _ = challenge.TYPES[prog["type"]]
         friends = list(ch.get("friends", {}).values())
         players = [{"name": f["name"], "pos": f["pos"], "km": f["km"]} for f in friends]
-        players.append({"name": prog["name"], "pos": prog["pos"], "km": prog["km"], "me": True})
+        players.append({"name": prog["name"], "pos": prog["pos"], "km": prog["points"], "me": True})
 
         if prog["finished"]:
             st.balloons()
-            st.success(f"🌸 You finished the {prog['length']} km Garden Path! Tulsi is so proud of you!")
-        locked = [l for l in challenge.ladders_for(prog["length"]) if l["habit"] not in prog["done"]]
+            st.success(f"🌸 You finished the Garden Path! Tulsi is so proud of you! Start a new one below whenever you like.")
         st.markdown(ui.tiles([
-            ("📍 MY SQUARE", f"{prog['pos']} / {prog['length']}", f"started {date.fromisoformat(prog['start']).strftime('%d %b')}"),
-            ("👟 WALKED", f"{prog['km']} km", "since the start"),
+            ("📍 MY SQUARE", f"{prog['pos']} / {prog['length']}", f"{name}"),
+            ("✨ THIS WEEK", f"+{prog['this_week']}", "squares earned"),
             ("🪜 LADDERS", f"{len(prog['climbed'])} climbed", " ".join(prog["climbed"]) or "unlock one below"),
             ("👯 FRIENDS", f"{len(friends)}", "on your board"),
         ]), unsafe_allow_html=True)
 
-        st.markdown(ui.chart_card("Your board", "Green ladders are unlocked · hover a token to see who it is",
-                                  challenge.board_svg(prog["length"], players, prog["pos"], prog["done"])),
-                    unsafe_allow_html=True)
-        legend = " &nbsp; ".join(
-            f"<span style='display:inline-block;width:.9rem;height:.9rem;border-radius:50%;background:"
-            f"{'#7B3FBF' if p.get('me') else challenge.TOKEN_COLORS[i % len(challenge.TOKEN_COLORS)]};"
-            f"vertical-align:middle'></span> {ui.html.escape(p['name'])} ({p['km']} km)"
-            for i, p in enumerate(players))
-        st.markdown(legend, unsafe_allow_html=True)
-        if locked:
-            st.caption("🔒 Still to unlock: " + " · ".join(f"{l['emoji']} {l['desc']}" for l in locked))
+        board_col, side_col = st.columns([3, 2])
+        with board_col:
+            st.markdown(ui.chart_card("Your board", "Green ladders are unlocked · hover a token to see who it is",
+                                      challenge.board_svg(prog["length"], players, prog["pos"], prog["done"])),
+                        unsafe_allow_html=True)
+            legend = " &nbsp; ".join(
+                f"<span style='display:inline-block;width:.9rem;height:.9rem;border-radius:50%;background:"
+                f"{'#7B3FBF' if p.get('me') else challenge.TOKEN_COLORS[i % len(challenge.TOKEN_COLORS)]};"
+                f"vertical-align:middle'></span> {ui.html.escape(p['name'])} (square {p['pos']})"
+                for i, p in enumerate(players))
+            st.markdown(legend, unsafe_allow_html=True)
+        with side_col:
+            with st.container(border=True):
+                ui.card_header("🌱", "How you move", name, tint="#E7F4EC")
+                st.markdown('<div class="chips" style="gap:.45rem">' + "".join(
+                    f'<span class="chip" style="font-size:.9rem !important;padding:.3rem .7rem">{r}</span>' for r in rules)
+                    + "</div>", unsafe_allow_html=True)
+                locked = [l for l in challenge.ladders_for(prog["length"]) if l["habit"] not in prog["done"]]
+                if locked:
+                    st.caption("🔒 Ladders still to unlock: " + " · ".join(f"{l['emoji']} {l['desc']}" for l in locked))
+            with st.container(border=True):
+                ui.card_header("📜", "Your moves", "Why you moved forward", tint="#F1EAFB")
+                recent = list(reversed(prog["events"]))[:8]
+                if recent:
+                    st.markdown("".join(
+                        f'<div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px dashed #EEE6F8">'
+                        f'<span>{ui.html.escape(why)} <span style="color:#9A90AE;font-size:.85rem">· '
+                        f'{date.fromisoformat(d).strftime("%a %d %b")}</span></span><b style="color:#3FAE74">+{n}</b></div>'
+                        for d, n, why in recent), unsafe_allow_html=True)
+                else:
+                    st.caption("Nothing yet. Check in, drink water or move a little, and watch your token go! 🌱")
 
-        st.markdown('<div class="section-label">Play with friends</div>', unsafe_allow_html=True)
+        ui.section("Play with friends", "Race side by side. Only your name and square are shared, never your health data.")
         f1, f2 = st.columns(2)
         with f1:
-            st.markdown("**Your friend code**: copy it and send it on WhatsApp")
             my_code = challenge.make_code(prog["name"], prog)
+            st.markdown("**Your friend code**")
             st.code(my_code, language=None)
             st.link_button("📲 Send it on WhatsApp", challenge.whatsapp_link(prog["name"], my_code))
-            st.caption("Send a fresh code whenever you've walked more. Only your name, square and km are shared.")
+            st.caption(f"Your friend should start a **{name}** challenge too, so you're playing the same game.")
         with f2:
             with st.form("add_friend", clear_on_submit=True):
                 code = st.text_input("Paste a friend's code", placeholder="TULSI-...")
                 if st.form_submit_button("➕ Add / update friend"):
                     try:
-                        challenge.save_friend(challenge.read_code(code))
+                        friend = challenge.read_code(code)
+                        challenge.save_friend(friend)
+                        if friend.get("type") != prog["type"]:
+                            st.session_state.type_note = (f"Added! Note: {friend['name']} is playing "
+                                                          f"{challenge.TYPES.get(friend['type'], ('another type',))[0]}, not {name}.")
                         st.rerun()
                     except ValueError as err:
                         st.error(str(err))
                     except Exception:
                         st.error("That code doesn't look right. Ask your friend to copy it again.")
+            if st.session_state.get("type_note"):
+                st.info(st.session_state.pop("type_note"))
             with st.expander("Friend doesn't have the app? Add them by hand"):
                 with st.form("manual_friend", clear_on_submit=True):
                     m1, m2 = st.columns(2)
                     fname = m1.text_input("Friend's name")
-                    fkm = m2.number_input("km they've walked", 0.0, 500.0, 0.0, 0.5)
+                    fsq = m2.number_input("Their square", 0, 100, 0, 1)
                     if st.form_submit_button("Save") and fname.strip():
-                        challenge.save_friend({"name": fname.strip()[:20], "pos": int(fkm), "km": fkm,
-                                               "updated": date.today().isoformat(), "manual": True})
+                        challenge.save_friend({"name": fname.strip()[:20], "pos": int(fsq), "km": float(fsq),
+                                               "type": prog["type"], "updated": date.today().isoformat(), "manual": True})
                         st.rerun()
         for f in friends:
             r1, r2 = st.columns([6, 1])
             age = challenge.days_old(f)
             stale = f" · ⏳ {age} days old, ask for a fresh code" if age and age >= 3 else ""
-            r1.write(f"👤 **{f['name']}**: square {f['pos']}, {f['km']} km"
-                     f"{' (added by hand)' if f.get('manual') else ''}{stale}")
+            r1.write(f"👤 **{f['name']}**: square {f['pos']}{' (added by hand)' if f.get('manual') else ''}{stale}")
             if r2.button("Remove", key=f"rmf_{f['name']}"):
                 challenge.remove_friend(f["name"])
                 st.rerun()
 
-        with st.expander("⚙️ Challenge options"):
-            if st.button("🔄 Start a new challenge"):
+        with st.expander("⚙️ Start a different challenge"):
+            st.caption("Your friends stay on your list. Your current progress will be replaced.")
+            if st.button("🔄 Choose a new challenge"):
                 storage.save_challenge({"friends": ch.get("friends", {})})
                 st.rerun()
 
