@@ -285,7 +285,7 @@ def set_plan_item(for_day: str, index: int, done: bool) -> None:
 
 # ---------- Games ----------
 # bingo.json: {"2026-W46": [3, 7, 12]}   (square positions you ticked by hand)
-# puzzles.json: {"2026-11-14": {"guesses": ["WATER", "SLEEP"]}}
+# puzzles.json: {"2026-11-14": {"solved": ["A0", "D"], "revealed": {"A2": 1}, "checks": 2}}
 
 BINGO_FILE = DATA_DIR / "bingo.json"
 PUZZLES_FILE = DATA_DIR / "puzzles.json"
@@ -307,9 +307,7 @@ def load_puzzles() -> dict:
     return _read(PUZZLES_FILE, {})
 
 
-def add_guess(day: str, guess: str) -> None:
-    data = load_puzzles()
-    data.setdefault(day, {"guesses": []})["guesses"].append(guess)
+def save_puzzles(data: dict) -> None:
     _write(PUZZLES_FILE, data)
 
 

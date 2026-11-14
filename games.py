@@ -5,8 +5,8 @@ games.py - two small games designed to feel good without being addictive.
    Squares are small real-life self-care tasks. Some tick themselves from your data (water, sleep, movement).
    Finish a row, column or diagonal for a bingo. A new card arrives every Monday.
 
-2. Daily Puzzle (one a day): guess the 5-letter health word in 6 tries, like Wordle.
-   Everyone gets the same word that day, so you can compare on WhatsApp. One puzzle a day, then it's done.
+2. Daily Crossword (one a day): a small newspaper-style crossword with easy clues about health and Kerala food.
+   Everyone gets the same puzzle that day, so you can compare on WhatsApp. One puzzle a day, then it's done.
 """
 
 import random
@@ -122,54 +122,46 @@ def bingo_share(name: str, done: set[int]) -> str:
     return head + "\n" + "\n".join(rows) + f"\nPlaying with Tulsi 🌿 Want to join {name or 'me'} this week?"
 
 
-# ---------------------------------------------------------------- Daily Puzzle
+# ---------------------------------------------------------------- Daily Crossword
 
-# Five-letter words about health, food and feeling good, each with a gentle fact shown after the puzzle.
-WORDS = {
-    "WATER": "Even mild dehydration can feel like tiredness or hunger. A glass of water is a great first step.",
-    "SLEEP": "Good sleep helps balance hunger hormones, which can make cravings easier to manage.",
-    "TULSI": "Tulsi (holy basil) tea is a calming, caffeine-free drink many people enjoy in the evening.",
-    "DANCE": "Dancing counts as exercise, and it's one of the most fun ways to move.",
-    "SMILE": "Smiling and laughing can help you feel calmer, even on hard days.",
-    "GUAVA": "Guava is rich in fibre and vitamin C, which makes it a great fruit snack.",
-    "LEMON": "A squeeze of lemon makes plain water more refreshing to sip through the day.",
-    "SEEDS": "Flax, chia and pumpkin seeds add fibre, healthy fats and a little protein to meals.",
-    "BEANS": "Beans and lentils give protein and fibre, which help keep blood sugar steadier.",
-    "SALAD": "Starting a meal with salad or veggies adds fibre and can help you feel full sooner.",
-    "CURDS": "Curd (yoghurt) contains probiotics, which support a healthy gut.",
-    "RASAM": "Rasam is light, warming and a lovely way to add spices like pepper and cumin.",
-    "PUTTU": "Pairing puttu with kadala curry adds protein, which keeps you fuller for longer.",
-    "APPAM": "Appam with a vegetable or egg stew makes a more balanced breakfast.",
-    "CUMIN": "Cumin (jeera) adds warmth and flavour, and jeera water is a popular gentle drink.",
-    "BASIL": "Fresh herbs like basil add flavour without extra salt or sugar.",
-    "COCOA": "Dark chocolate with more cocoa usually has less sugar than milk chocolate.",
-    "BRAIN": "Your brain loves sleep, water, movement and omega-3s from walnuts, seeds and fish.",
-    "HEART": "Regular walking is one of the simplest things you can do for your heart.",
-    "RELAX": "A few slow breaths, with a longer breath out than in, can help your body relax.",
-    "PEACE": "A few quiet minutes a day without screens can lower stress.",
-    "HAPPY": "Sunlight in the morning can lift your mood and help your sleep at night.",
-    "LAUGH": "Laughing with friends is good for your mood and helps ease stress.",
-    "STEPS": "Every step counts. Short walks after meals can help with blood sugar.",
-    "WALKS": "A 10-minute walk after a meal is a small habit with big benefits.",
-    "FOCUS": "Short movement breaks can help you focus better at work or study.",
-    "BLOOM": "Progress is like a plant growing: slow, steady and real, even when you can't see it daily.",
-    "LOTUS": "Lotus pose and other gentle yoga poses can help calm the mind.",
-    "SUNNY": "Sunlight helps your body make vitamin D. Low vitamin D is common in PCOS, so ask your doctor to check yours.",
-    "FRESH": "Fresh, home-cooked food usually has less hidden sugar and salt than packaged food.",
-    "CYCLE": "Tracking your cycle helps you understand your energy, cravings and moods.",
-    "FIBRE": "Fibre from vegetables, whole grains and dal helps keep blood sugar steadier.",
-    "PLANT": "Filling half your plate with plants is an easy rule for balanced meals.",
-    "PETAL": "Small wins add up, like petals making a flower.",
-    "MANGO": "Mango is delicious in season. Pairing it with nuts or curd makes it a more filling snack.",
-    "APPLE": "An apple with a few nuts is a quick, balanced snack.",
-    "GRAPE": "Frozen grapes are a refreshing swap for sweets on a hot day.",
-    "HONEY": "Honey is still sugar, so a drizzle goes a long way.",
-    "SPICE": "Spices like turmeric, cinnamon and ginger add flavour to healthy cooking.",
-    "YOGIC": "Yogic breathing (pranayama) is a calming practice you can do anywhere.",
-    "SWEAT": "A little sweat from exercise is a sign your body is working. Drink water after!",
-    "TRUST": "Trust the process. Health changes take weeks, not days.",
-    "PROUD": "Be proud of the small steps. They're the ones that last.",
+# Easy, friendly clues about health, Kerala food and feeling good.
+CLUES = {
+    "WATER": "Drink 8 glasses of this a day", "SLEEP": "Aim for 7 to 9 hours of this every night",
+    "WALK": "A gentle 15-minute one after meals helps", "YOGA": "Practice with poses like Tree and Child's pose",
+    "DANCE": "Move to music: fun cardio!", "TULSI": "Holy basil, and our coach's name",
+    "MANGO": "Kerala's favourite summer fruit", "GUAVA": "Green fruit packed with vitamin C",
+    "LEMON": "Squeeze this into water for some zing", "APPLE": "One a day keeps the doctor away, they say",
+    "BANANA": "Yellow fruit full of potassium", "DATES": "Sweet dried fruit to beat a sugar craving",
+    "CURD": "Dahi, great with rice", "RAGI": "Finger millet, used in dosa and porridge",
+    "OATS": "Breakfast grain cooked into porridge", "PUTTU": "Steamed rice cylinder, a Kerala breakfast",
+    "APPAM": "Lacy Kerala pancake with a soft centre", "IDLI": "Soft steamed rice cake",
+    "DOSA": "Thin, crispy South Indian crepe", "SAMBAR": "Lentil and vegetable stew",
+    "RASAM": "Tangy, peppery South Indian soup", "AVIAL": "Kerala mixed vegetables with coconut and curd",
+    "THORAN": "Kerala stir-fried veg with grated coconut", "SEEDS": "Flax, chia and pumpkin ___",
+    "NUTS": "Almonds and walnuts, for example", "EGGS": "Protein-packed breakfast, boiled or scrambled",
+    "PANEER": "Indian cottage cheese", "FISH": "Kerala curry star, rich in omega-3",
+    "SPINACH": "Palak, a leafy green", "GINGER": "Root that goes in chai and soothes the tummy",
+    "CUMIN": "Jeera", "SMILE": "Curved line on a happy face", "RELAX": "Unwind and let go",
+    "BREATHE": "Slowly in... and out", "CALM": "Peaceful, not stressed", "HAPPY": "Joyful",
+    "STRETCH": "Reach your arms up high and ___", "STEPS": "A pedometer counts these",
+    "HEART": "It pumps blood around your body", "BRAIN": "Your thinking organ",
+    "CYCLE": "Menstrual ___, which you can track in FitBuddy", "FIBRE": "Found in veggies, it helps digestion",
+    "PROTEIN": "Builds muscle: found in eggs, dal and paneer", "SALAD": "A bowl of fresh raw veggies",
+    "SOUP": "A warm bowl, like rasam", "TEA": "Chai or herbal ___", "REST": "Take a break and ___",
+    "NAP": "A short daytime sleep", "JOG": "Run slowly", "SWIM": "Exercise in a pool",
+    "HIKE": "A long walk up a hill", "PLANK": "Hold your body straight like a board",
+    "SQUAT": "Bend your knees as if sitting on a chair", "MOOD": "How you feel",
+    "JOURNAL": "A notebook for your thoughts", "HONEY": "Sweet golden syrup made by bees",
+    "COCONUT": "Kerala's favourite tree fruit", "PAPAYA": "Orange fruit that's good for digestion",
+    "PEACE": "Calm and quiet", "FRIEND": "Someone you call when you need a laugh",
+    "MUSIC": "Songs and melodies", "NATURE": "Trees, flowers and fresh air", "GARDEN": "Where Tulsi grows",
+    "BLOOM": "To flower", "LOTUS": "Yoga pose named after a flower", "SUNNY": "A bright, warm day",
+    "HYDRATE": "Drink water to ___", "SPROUTS": "Germinated moong, great in chaat",
+    "WELLNESS": "Feeling good in body and mind", "SUNLIGHT": "Morning ___ helps you sleep better at night",
 }
+SPINES = ["WATER", "SLEEP", "DANCE", "TULSI", "SMILE", "RELAX", "HAPPY", "BLOOM", "LOTUS", "PEACE", "HEART",
+          "STEPS", "SALAD", "MANGO", "LEMON", "APPLE", "CYCLE", "BRAIN", "HONEY", "MUSIC", "PLANK", "SQUAT",
+          "SPROUTS", "BREATHE", "PROTEIN", "STRETCH", "COCONUT", "JOURNAL", "SPINACH", "HYDRATE"]
 LAUNCH = date(2026, 11, 1)  # puzzle #1
 
 
@@ -177,45 +169,116 @@ def puzzle_number(day: date | None = None) -> int:
     return ((day or date.today()) - LAUNCH).days + 1
 
 
-def word_of_the_day(day: date | None = None) -> str:
-    """Same word for everyone on the same day (the day is the seed)."""
-    words = sorted(WORDS)
-    random.Random(f"tulsi-{(day or date.today()).isoformat()}").shuffle(words)
-    return words[0]
+def make_crossword(day: date | None = None) -> dict:
+    """Builds today's crossword. One word goes DOWN, and words go ACROSS through its 1st, 3rd, 5th (and 7th) letters.
+    Across words sit on every other row, so they never touch each other by accident.
+    The date is the random seed, so everyone gets the same puzzle that day."""
+    rng = random.Random(f"crossword-{(day or date.today()).isoformat()}")
+    for _ in range(50):  # try spines until one gives at least 3 across words
+        spine = rng.choice(SPINES)
+        used, across = {spine}, []
+        for row in range(0, len(spine), 2):
+            letter = spine[row]
+            options = [(w, i) for w in CLUES if w not in used for i, ch in enumerate(w) if ch == letter and 3 <= len(w) <= 8]
+            if options:
+                word, k = rng.choice(sorted(options))
+                used.add(word)
+                across.append({"word": word, "row": row, "offset": k})
+        if len(across) >= 3:
+            break
+    spine_col = max(a["offset"] for a in across)
+    for a in across:
+        a["col"] = spine_col - a["offset"]
+    width = max(max(a["col"] + len(a["word"]) for a in across), spine_col + 1)
+
+    # number the start of each answer, in reading order (like a newspaper)
+    starts = {(a["row"], a["col"]) for a in across} | {(0, spine_col)}
+    numbers = {cell: n + 1 for n, cell in enumerate(sorted(starts))}
+    entries = [{"id": f"A{a['row']}", "dir": "Across", "num": numbers[(a["row"], a["col"])], "word": a["word"],
+                "row": a["row"], "col": a["col"], "clue": CLUES[a["word"]]} for a in across]
+    entries.append({"id": "D", "dir": "Down", "num": numbers[(0, spine_col)], "word": spine, "row": 0, "col": spine_col,
+                    "clue": CLUES[spine]})
+    entries.sort(key=lambda e: (e["dir"] != "Across", e["num"]))
+    return {"rows": len(spine), "cols": width, "entries": entries, "numbers": numbers, "number": puzzle_number(day)}
 
 
-def score_guess(guess: str, answer: str) -> list[str]:
-    """Colours for each letter, like Wordle: 'g' right place, 'y' in the word elsewhere, 'x' not in the word.
-    Repeated letters are handled properly (a letter is only marked as many times as it appears)."""
-    result = ["x"] * 5
-    remaining = {}
-    for i, (g, a) in enumerate(zip(guess, answer)):
-        if g == a:
-            result[i] = "g"
-        else:
-            remaining[a] = remaining.get(a, 0) + 1
-    for i, g in enumerate(guess):
-        if result[i] == "x" and remaining.get(g, 0) > 0:
-            result[i] = "y"
-            remaining[g] -= 1
-    return result
+def cells_of(entry: dict) -> list[tuple[int, int]]:
+    if entry["dir"] == "Across":
+        return [(entry["row"], entry["col"] + i) for i in range(len(entry["word"]))]
+    return [(entry["row"] + i, entry["col"]) for i in range(len(entry["word"]))]
 
 
 def puzzle_state(day: date | None = None) -> dict:
+    """Today's crossword plus your progress: solved answers, revealed letters, and how many checks."""
     day = day or date.today()
-    data = storage.load_puzzles().get(day.isoformat(), {"guesses": []})
-    answer = word_of_the_day(day)
-    guesses = data["guesses"]
-    won = bool(guesses) and guesses[-1] == answer
-    return {"answer": answer, "guesses": guesses, "won": won, "over": won or len(guesses) >= 6,
-            "number": puzzle_number(day)}
+    cw = make_crossword(day)
+    saved = storage.load_puzzles().get(day.isoformat(), {})
+    solved = set(saved.get("solved", []))
+    revealed = saved.get("revealed", {})
+    letters = {}  # (row, col) -> letter shown in the grid
+    for e in cw["entries"]:
+        cells = cells_of(e)
+        shown = len(e["word"]) if e["id"] in solved else int(revealed.get(e["id"], 0))
+        for (r, c), ch in list(zip(cells, e["word"]))[:shown]:
+            letters[(r, c)] = ch
+    for e in cw["entries"]:  # a word is also solved if crossing words revealed all of its letters
+        if all(cell in letters for cell in cells_of(e)):
+            solved.add(e["id"])
+    return {**cw, "solved": solved, "letters": letters, "checks": saved.get("checks", 0),
+            "hints": sum(int(v) for v in revealed.values()), "over": len(solved) == len(cw["entries"])}
+
+
+def check_answers(answers: dict) -> dict:
+    """answers: {entry id: typed word}. Saves the correct ones. Returns {entry id: True/False} for what was typed."""
+    day = date.today().isoformat()
+    cw = make_crossword()
+    data = storage.load_puzzles()
+    saved = data.setdefault(day, {})
+    saved["checks"] = saved.get("checks", 0) + 1
+    result = {}
+    for e in cw["entries"]:
+        typed = "".join(ch for ch in (answers.get(e["id"]) or "").upper() if ch.isalpha())
+        if typed:
+            result[e["id"]] = typed == e["word"]
+            if result[e["id"]]:
+                saved.setdefault("solved", [])
+                if e["id"] not in saved["solved"]:
+                    saved["solved"].append(e["id"])
+    storage.save_puzzles(data)
+    return result
+
+
+def reveal_letter(entry_id: str) -> None:
+    day = date.today().isoformat()
+    data = storage.load_puzzles()
+    saved = data.setdefault(day, {})
+    saved.setdefault("revealed", {})
+    saved["revealed"][entry_id] = int(saved["revealed"].get(entry_id, 0)) + 1
+    storage.save_puzzles(data)
+
+
+def crossword_html(state: dict) -> str:
+    """The grid: white boxes with clue numbers, filled letters, and nothing where there's no box."""
+    used = {cell for e in state["entries"] for cell in cells_of(e)}
+    rows = []
+    for r in range(state["rows"]):
+        cells = []
+        for c in range(state["cols"]):
+            if (r, c) not in used:
+                cells.append('<div class="cw-cell cw-empty"></div>')
+                continue
+            num = state["numbers"].get((r, c))
+            letter = state["letters"].get((r, c), "")
+            cells.append(f'<div class="cw-cell{" cw-filled" if letter else ""}">'
+                         f'{f"<span class=cw-num>{num}</span>" if num else ""}{letter}</div>')
+        rows.append(f'<div class="cw-row">{"".join(cells)}</div>')
+    return f'<div class="cw-grid">{"".join(rows)}</div>'
 
 
 def puzzle_share(state: dict) -> str:
-    emoji = {"g": "🟩", "y": "🟨", "x": "⬜"}
-    rows = ["".join(emoji[c] for c in score_guess(g, state["answer"])) for g in state["guesses"]]
-    tries = f"{len(state['guesses'])}/6" if state["won"] else "X/6"
-    return f"🌿 Tulsi Word #{state['number']} {tries}\n" + "\n".join(rows) + "\nPlay today's word in FitBuddy!"
+    hints = f", {state['hints']} hint{'s' if state['hints'] != 1 else ''}" if state["hints"] else ", no hints"
+    return (f"🌿 Tulsi Crossword #{state['number']} solved! ✅\n{len(state['entries'])} words, "
+            f"{state['checks']} check{'s' if state['checks'] != 1 else ''}{hints}\nCan you solve today's in FitBuddy?")
 
 
 def whatsapp(text: str) -> str:

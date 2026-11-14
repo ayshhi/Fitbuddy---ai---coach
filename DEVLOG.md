@@ -187,9 +187,12 @@ I replaced it with two games, each with a built-in limit:
 - **Wellness Bingo (weekly):** the same card for everyone that week (the week number is the random seed), so friends
   can play together without any server. The squares are real-life self-care tasks that help PCOS (sunlight,
   movement, sleep, connection, less sugar), so the reward comes from doing things off the screen.
-- **Tulsi's Daily Word (one a day):** a Wordle-style puzzle where the date is the seed, so everyone gets the same
-  word. I scored repeated letters properly (a letter is only marked as often as it appears in the answer). After
-  one puzzle it says "come back tomorrow" on purpose.
+- **Tulsi's Daily Crossword (one a day):** I first tried a Wordle-style word game, but guessing with no clues was
+  too hard, so I switched to a newspaper-style crossword with easy clues. Each day's puzzle is generated
+  automatically: one word goes down, and across words cross it on every other row, so they never touch by
+  accident. I tested 40 days of puzzles to make sure no letters clash. Crossing words reveal letters, and there's a
+  "reveal a letter" hint.
+- **Bingo layout:** on my wide screen the 5 columns wrapped and the card fell apart, so I locked it to a 5×5 grid.
 
 ---
 

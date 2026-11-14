@@ -25,7 +25,7 @@ and my cycle became regular again.
 
 - **💧 Water Tulsi**: every glass you drink waters Tulsi, with a watering-can animation. After 8 glasses her leaves sparkle with dewdrops.
 - **🎯 Wellness Bingo (weekly, with friends)**: everyone gets the same 5×5 card each week, full of small real-life self-care tasks (sunlight, a short walk, calling someone you love, an early night). Some squares tick themselves from your data. Get a bingo, share your card on WhatsApp, and get a new card every Monday.
-- **🧠 Tulsi's Daily Word**: a Wordle-style 5-letter health word, the same for everyone, one per day, with a gentle health fact afterwards and a shareable result. Designed to be a 3-minute brain break, not addictive.
+- **🧩 Tulsi's Daily Crossword**: a small newspaper-style crossword with easy clues about health and Kerala food. Type the answers and they fill the grid. Crossing words help, and you can reveal a letter if stuck. It's the same for everyone each day and shareable, with one a day so it stays a fun brain break, not a habit to fight.
 - **📤 Share card**: a downloadable progress image for WhatsApp or Instagram. You choose what's shown, and weight is hidden by default.
 - **🌈 Home page**: Tulsi bouncing under an animated rainbow, with today's status and a "Let's start" button.
 - **🆘 Craving SOS page**: log the craving, how strong it is and what's behind it, then breathe with Tulsi. You get instant Indian swap ideas (no AI needed), can talk it through with Tulsi, and see your patterns by time of day, trigger and cycle phase.

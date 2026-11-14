@@ -39,7 +39,7 @@ def show_error(err: Exception) -> None:
 
 ui.sidebar_brand()
 PAGES = ["🌈 Home", "🏠 Today", "💬 Chat with Tulsi", "📸 Food scan", "🆘 Craving SOS", "🌡️ Symptoms",
-         "🌸 My garden", "🎯 Wellness Bingo", "🧠 Daily Puzzle", "📊 Progress", "🩺 Health profile"]
+         "🌸 My garden", "🎯 Wellness Bingo", "🧩 Daily Crossword", "📊 Progress", "🩺 Health profile"]
 page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
 
 
@@ -99,7 +99,7 @@ if page == "🌈 Home":
         chips.append(f"🔥 {streak}-day best streak")
     chips.append(f"🎯 Bingo: {len(games.ticked())}/25 this week")
     if not games.puzzle_state()["over"]:
-        chips.append("🧠 Today's word is waiting")
+        chips.append("🧩 Today's crossword is waiting")
     st.markdown(ui.home_html(profile.get("name", ""), chips), unsafe_allow_html=True)
     with st.container(key="letsgo"):
         st.button("Let's start ✨", on_click=go_to, args=("🏠 Today",))
@@ -534,8 +534,18 @@ elif page == "🎯 Wellness Bingo":
                    f'.stApp .st-key-bingo_{i} button p {{ color: #FFFFFF !important; }}')
     st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
 
+    # keep the card a neat 5x5 grid on every screen: no wrapping, equal columns, squares fill their column
+    st.markdown("""<style>
+    .st-key-bingo_grid [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: .8rem !important; }
+    .st-key-bingo_grid [data-testid="stColumn"], .st-key-bingo_grid [data-testid="column"] {
+        flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; }
+    .st-key-bingo_grid [data-testid="stVerticalBlock"] { gap: .8rem !important; }
+    .st-key-bingo_grid .stButton, .st-key-bingo_grid [class*="st-key-bingo_"] { width: 100% !important; }
+    .st-key-bingo_grid button { width: 100% !important; height: 7.6rem !important; }
+    </style>""", unsafe_allow_html=True)
+    grid = st.container(key="bingo_grid")
     for r in range(5):
-        cols = st.columns(5)
+        cols = grid.columns(5)
         for c in range(5):
             i = r * 5 + c
             tid, emoji, text, auto_key = card[i]
@@ -557,79 +567,66 @@ elif page == "🎯 Wellness Bingo":
         st.caption("Tip: make a WhatsApp group with friends and share every Sunday. Nobody loses, everyone gets healthier. 🌿")
 
 
-elif page == "🧠 Daily Puzzle":
-    ui.hero("🧠", "Tulsi's Daily Word", "One word a day · same word for everyone · about 3 minutes 🌿")
+elif page == "🧩 Daily Crossword":
+    ui.hero("🧩", "Tulsi's Daily Crossword", "Easy clues about health and food · same puzzle for everyone · one a day 🌿")
     state = games.puzzle_state()
-    today_key = date.today().isoformat()
-
-    colors = {"g": "#3FAE74", "y": "#F7B267", "x": "#B9AECB"}
-    rows_html = []
-    for r in range(6):
-        if r < len(state["guesses"]):
-            g = state["guesses"][r]
-            marks = games.score_guess(g, state["answer"])
-            newest = r == len(state["guesses"]) - 1
-            cells = "".join(
-                f'<div class="pz-tile{" flip" if newest else ""}" style="background:{colors[m]};border-color:{colors[m]};'
-                f'color:#fff;animation-delay:{k * 0.12:.2f}s">{ch}</div>' for k, (ch, m) in enumerate(zip(g, marks)))
-        else:
-            cells = "".join('<div class="pz-tile"></div>' for _ in range(5))
-        rows_html.append(f'<div class="pz-row">{cells}</div>')
     st.markdown("""<style>
-    .pz-board { display:flex; flex-direction:column; gap:.45rem; align-items:center; margin: .5rem 0 1rem; }
-    .pz-row { display:flex; gap:.45rem; }
-    .pz-tile { width:3.6rem; height:3.6rem; border:2px solid #E6DDF3; border-radius:14px; background:#FFFFFF;
-               display:flex; align-items:center; justify-content:center; font-size:1.7rem; font-weight:800; }
-    .pz-tile.flip { animation: pz-flip .5s ease both; }
-    @keyframes pz-flip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
-    .pz-keys { display:flex; flex-direction:column; align-items:center; gap:.3rem; margin-top:.4rem; }
-    .pz-keys div { display:flex; gap:.3rem; }
-    .pz-keys span { min-width:2.1rem; padding:.4rem 0; text-align:center; border-radius:8px; font-weight:700; font-size:.9rem; }
-    </style>""" + f'<div class="pz-board">{"".join(rows_html)}</div>', unsafe_allow_html=True)
+    .cw-grid { display:flex; flex-direction:column; gap:.35rem; align-items:center; padding: .6rem 0 1rem; }
+    .cw-row { display:flex; gap:.35rem; }
+    .cw-cell { position:relative; width:3.3rem; height:3.3rem; border-radius:12px; background:#FFFFFF; border:2px solid #D9C8F2;
+               display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:800; color:#4E2A84; }
+    .cw-empty { background:transparent; border-color:transparent; }
+    .cw-filled { background:#EEF8F2; border-color:#A8DDBE; color:#1E6B45; animation: cw-pop .35s ease both; }
+    .cw-num { position:absolute; top:.15rem; left:.3rem; font-size:.7rem; font-weight:700; color:#9A90AE; }
+    @keyframes cw-pop { from { transform: scale(.8); } to { transform: none; } }
+    </style>""", unsafe_allow_html=True)
 
-    # a small keyboard that shows which letters you've learned about
-    best = {}
-    rank = {"g": 3, "y": 2, "x": 1}
-    for g in state["guesses"]:
-        for ch, m in zip(g, games.score_guess(g, state["answer"])):
-            if rank[m] > rank.get(best.get(ch), 0):
-                best[ch] = m
-    key_rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
-    keys = "".join("<div>" + "".join(
-        f'<span style="background:{colors[best[k]] if k in best else "#F1EAFB"};color:{"#fff" if k in best else "#4E2A84"}">{k}</span>'
-        for k in row) + "</div>" for row in key_rows)
+    grid_col, clue_col = st.columns([1, 1])
+    with grid_col:
+        st.markdown(f'<div class="soft-panel">{games.crossword_html(state)}</div>', unsafe_allow_html=True)
+        st.caption(f"{len(state['solved'])} of {len(state['entries'])} words solved · "
+                   "letters from words you solve help with the words that cross them")
 
-    left, mid, right = st.columns([1, 2, 1])
-    with mid:
-        if not state["over"]:
-            with st.form("guess", clear_on_submit=True, border=False):
-                g1, g2 = st.columns([3, 1])
-                guess = g1.text_input("Your guess", max_chars=5, placeholder="Type a 5-letter word", label_visibility="collapsed")
-                if g2.form_submit_button("Guess", type="primary"):
-                    guess = guess.strip().upper()
-                    if len(guess) != 5 or not guess.isalpha():
-                        st.warning("Please type exactly 5 letters.")
-                    else:
-                        storage.add_guess(today_key, guess)
-                        st.rerun()
-            st.markdown(f'<div class="pz-keys">{keys}</div>', unsafe_allow_html=True)
-            if len(state["guesses"]) >= 3:
-                st.caption(f"💡 Hint: today's word starts with **{state['answer'][0]}**.")
-            st.caption("🟩 right letter, right spot · 🟨 in the word, wrong spot · ⬜ not in the word. "
-                       "Today's word is about health, food or feeling good.")
-        else:
-            if state["won"]:
-                st.markdown(ui.card(f"🎉 You got it in {len(state['guesses'])}!", f"Today's word: <b>{state['answer']}</b>"),
+    with clue_col:
+        if state["over"]:
+            if st.session_state.pop("cw_just_done", False):
+                st.balloons()
+            st.markdown(ui.card("🎉 Crossword solved!", f"{state['checks']} check(s), {state['hints']} hint(s). Well done!"),
                             unsafe_allow_html=True)
-            else:
-                st.markdown(ui.card("🌱 Nice try!", f"Today's word was <b>{state['answer']}</b>. Tomorrow's a fresh start."),
-                            unsafe_allow_html=True)
-            st.markdown(ui.card("💡 Did you know?", ui.html.escape(games.WORDS[state["answer"]])), unsafe_allow_html=True)
             share = games.puzzle_share(state)
             st.code(share, language=None)
             st.link_button("📲 Share on WhatsApp", games.whatsapp(share), type="primary")
-            st.caption(f"That's today's puzzle done! Come back tomorrow for word #{state['number'] + 1}. "
+            st.caption(f"That's today's puzzle done. Come back tomorrow for crossword #{state['number'] + 1}. "
                        "One a day keeps it fun, not addictive. 🌿")
+        else:
+            with st.form("crossword", border=False):
+                answers = {}
+                for e in state["entries"]:
+                    label = f"{e['num']} {e['dir']} · {e['clue']} ({len(e['word'])} letters)"
+                    if e["id"] in state["solved"]:
+                        st.markdown(f"✅ **{e['num']} {e['dir']}** · {e['clue']}: **{e['word']}**")
+                    else:
+                        answers[e["id"]] = st.text_input(label, key=f"cw_{e['id']}", max_chars=len(e["word"]),
+                                                         placeholder="_ " * len(e["word"]))
+                checked = st.form_submit_button("✔️ Check my answers", type="primary")
+            if checked:
+                result = games.check_answers(answers)
+                wrong = [e for e in state["entries"] if result.get(e["id"]) is False]
+                if games.puzzle_state()["over"]:
+                    st.session_state.cw_just_done = True
+                st.session_state.cw_feedback = (
+                    "Not quite: " + ", ".join(f"{e['num']} {e['dir']}" for e in wrong) + ". Try again or reveal a letter! 💜"
+                    if wrong else ("All correct so far! 🎉" if result else "Type an answer first 🙂"))
+                st.rerun()
+            if st.session_state.get("cw_feedback"):
+                st.info(st.session_state.pop("cw_feedback"))
+            st.markdown("**Stuck?** Reveal one letter at a time:")
+            open_entries = [e for e in state["entries"] if e["id"] not in state["solved"]]
+            cols = st.columns(min(4, len(open_entries)) or 1)
+            for i, e in enumerate(open_entries):
+                if cols[i % len(cols)].button(f"💡 {e['num']} {e['dir']}", key=f"rev_{e['id']}"):
+                    games.reveal_letter(e["id"])
+                    st.rerun()
 
 
 elif page == "📸 Food scan":
