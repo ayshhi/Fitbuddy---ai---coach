@@ -158,6 +158,19 @@ After an honest review, some features were too surface-level, so I improved them
 - **Layout:** more space between sections, and a new **Home page** with Tulsi under a rainbow and "Let's start".
 - **Bug caught by testing:** an edit accidentally removed a helper function; my page-by-page tests found it before release.
 
+## Step 12 (14 Nov): Making it something I'd actually use every day
+
+I slept on it and asked myself what would stop me using FitBuddy for months, not just for a demo:
+
+- **Logging was a chore** → **"Just tell Tulsi"**: I describe my day in one sentence (or say it), the AI turns it into
+  structured data, and I confirm. It never guesses things I didn't say, and keeps my Samsung data for anything I didn't mention.
+- **Advice didn't carry over** → Tulsi's plan is saved as a **checklist**. The next check-in tells her what I did and my
+  7-day follow-through rate. Under 50%, she makes the next plan smaller; over 80%, slightly bigger. This is how real
+  habit coaching works: tiny, achievable steps.
+- **Nothing reminded me** → a downloadable **calendar file** with daily reminders, so my phone nudges me without any server.
+- **The scale can make you quit** → a **7-day average** weight line, and an explanation when weight goes up, using my own
+  data (cycle phase, sleep, stress, food, workouts). I remember how discouraging a random +1 kg felt.
+
 ---
 
 ## What I learned

@@ -298,25 +298,154 @@ def build_context(profile: dict, checkins: dict) -> str:
 
 # ---------- The three things the coach can do ----------
 
+def plan_context(day: str) -> str:
+    """What Tulsi needs to close the loop: how today's plan went, and how much of her plans usually happen."""
+    import journey
+    import storage
+    lines = []
+    plan = storage.load_plans().get(day)
+    if plan:
+        ticks = ", ".join(f"{'DONE' if i['done'] else 'not done'}: {i['text']}" for i in plan["items"])
+        lines.append(f"The plan you gave me for {day}: {ticks}.")
+    ft = journey.follow_through(7)
+    if ft["rate"] is not None:
+        lines.append(f"My plan follow-through over the last 7 days: {ft['done']} of {ft['total']} items ({ft['rate']:.0%}).")
+        if ft["rate"] < 0.5:
+            lines.append("That's under half, so make tomorrow's plan SMALLER and easier (tiny wins build habits).")
+        elif ft["rate"] > 0.8:
+            lines.append("That's great, so tomorrow's plan can be slightly more ambitious.")
+    reasons = journey.scale_reasons(journey.all_days())
+    if reasons and reasons["reasons"]:
+        lines.append(f"My weight went up {reasons['up_by']} kg since the last weigh-in. Likely temporary reasons from my data: "
+                     + " ".join(r.split(" ", 1)[1] for r in reasons["reasons"][:3])
+                     + " Reassure me kindly and point me to the 7-day trend.")
+    return "\n".join(lines)
+
+
 def daily_feedback(profile: dict, checkins: dict, today: str) -> str:
-    """Encouraging feedback on today plus a gentle plan for tomorrow."""
+    """Encouraging feedback on today, plus a 3-item plan for tomorrow.
+    The reply ends with a machine-readable line "PLAN: a | b | c", which the app turns into a checklist."""
+    loop = plan_context(today)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "system", "content": build_context(profile, checkins)},
+        {"role": "system", "content": build_context(profile, checkins) + ("\n\nPLAN FOLLOW-UP\n" + loop if loop else "")},
         {
             "role": "user",
             "content": (
                 f"I just finished my check-in for {today}. Text me back like a friend on WhatsApp, "
                 "in 3-4 short messages separated by ---:\n"
-                "1. A positive reaction to my day (celebrate something specific).\n"
-                "2. How my sleep and stress might be affecting me (one or two sentences).\n"
-                "3. A tiny plan for tomorrow as 3 short bullets (movement, food, sleep), "
-                "adjusted to my energy, sleep and stress.\n"
-                "Optionally a 4th message: a short encouraging line or question."
+                "1. If there was a plan for today, start by celebrating what I DID from it (be specific). Never guilt "
+                "me about what I didn't do. Otherwise, celebrate something specific about my day.\n"
+                "2. How my sleep, stress and cycle might be affecting me (one or two sentences).\n"
+                "3. A tiny plan for tomorrow as exactly 3 short bullets (movement, food, sleep), "
+                "adjusted to my energy, sleep, stress and how well I follow plans.\n"
+                "Optionally a 4th message: a short encouraging line.\n"
+                "Then, on the very last line, write PLAN: followed by the same 3 actions, very short, separated by ' | ' "
+                "(for example: PLAN: 20-min walk after lunch | Add dal to dinner | Phone away by 10:30 pm). "
+                "The app reads this line to make my checklist."
             ),
         },
     ]
     return call_ai(messages)
+
+
+def extract_plan(reply: str) -> tuple[str, list[str]]:
+    """Splits Tulsi's reply into (text to show, plan items). Falls back to her bullet points."""
+    import re
+    lines = reply.strip().splitlines()
+    items, kept = [], []
+    for line in lines:
+        m = re.match(r"\s*\**PLAN\**\s*:\s*(.+)", line, flags=re.I)
+        if m and not items:
+            items = [x.strip(" .*-") for x in m.group(1).split("|") if x.strip(" .*-")]
+        else:
+            kept.append(line)
+    text = "\n".join(kept).strip()
+    if not items:  # the model forgot the PLAN line: use the first bullets instead
+        bullets = [re.sub(r"^\s*(?:[-•*]|\d+[.)])\s+", "", l).strip() for l in kept if re.match(r"^\s*(?:[-•*]|\d+[.)])\s+", l)]
+        items = bullets[:3]
+    return text, items[:3]
+
+
+# ---------- "Just tell Tulsi": turn your own words into a check-in ----------
+
+QUICK_LOG_PROMPT = """You turn a person's description of their day into data for a health app.
+Only fill in what they actually said or clearly implied. Use null for anything not mentioned. Never guess sleep,
+steps, weight or symptoms.
+
+Reply with ONLY valid JSON in exactly this format:
+{
+  "sleep_hours": number or null,
+  "steps": integer or null,
+  "distance_km": number or null,
+  "exercise": "short description" or null,
+  "exercise_minutes": integer or null,
+  "foods": [{"name": "Masala dosa", "meal": "Breakfast|Lunch|Snack|Dinner", "calories": 250}],
+  "water_glasses": integer or null,
+  "stress": 1-5 or null,
+  "energy": 1-5 or null,
+  "mood": one of ["😊 Good", "🙂 Okay", "😐 Meh", "😔 Low", "😣 Frustrated"] or null,
+  "weight_kg": number or null,
+  "period_started": true or false,
+  "symptoms": {"acne": 0-3, "hair_fall": 0-3, "bloating": 0-3, "cramps": 0-3, "cravings": 0-3, "fatigue": 0-3, "low_mood": 0-3},
+  "notes": "anything else worth remembering, one short sentence" or null
+}
+Rules:
+- foods: estimate calories for a typical Indian home portion of what they named (e.g. 2 chapatis = 2 items or one item
+  "2 chapatis"). If the meal isn't said, guess from the time words (morning = Breakfast, etc.), else Snack.
+- symptoms: include ONLY symptoms they mentioned (0 none, 1 mild, 2 moderate, 3 strong). Empty object if none.
+- stress/energy: map words like "very stressed" = 5, "a bit stressed" = 3, "exhausted" = 1, "full of energy" = 5.
+- "tired" alone means energy 2. A walk of "half an hour" = 30 minutes.
+"""
+
+
+def parse_day(text: str) -> dict:
+    """Ask the AI to turn free text into check-in fields. Returns a cleaned dict."""
+    import json
+    raw = call_ai([{"role": "system", "content": QUICK_LOG_PROMPT}, {"role": "user", "content": text}],
+                  max_tokens=900, temperature=0.1)
+    raw = raw.strip().strip("`")
+    start, end = raw.find("{"), raw.rfind("}")
+    if start < 0 or end < 0:
+        raise CoachError("Tulsi couldn't understand that. Try saying it a little differently.")
+    try:
+        data = json.loads(raw[start:end + 1])
+    except ValueError:
+        raise CoachError("Tulsi couldn't understand that. Try saying it a little differently.")
+
+    def num(key, kind=float, lo=0, hi=10 ** 6):
+        try:
+            v = kind(data.get(key))
+            return v if lo <= v <= hi else None
+        except (TypeError, ValueError):
+            return None
+
+    moods = ["😊 Good", "🙂 Okay", "😐 Meh", "😔 Low", "😣 Frustrated"]
+    foods = []
+    for f in data.get("foods") or []:
+        if isinstance(f, dict) and f.get("name"):
+            meal = f.get("meal") if f.get("meal") in ("Breakfast", "Lunch", "Snack", "Dinner") else "Snack"
+            try:
+                kcal = max(0, min(3000, int(float(f.get("calories") or 0))))
+            except (TypeError, ValueError):
+                kcal = 0
+            foods.append({"name": str(f["name"])[:60], "meal": meal, "calories": kcal})
+    symptoms = {}
+    for k, v in (data.get("symptoms") or {}).items():
+        try:
+            if k in ("acne", "hair_fall", "bloating", "cramps", "cravings", "fatigue", "low_mood"):
+                symptoms[k] = max(0, min(3, int(v)))
+        except (TypeError, ValueError):
+            pass
+    return {
+        "sleep_hours": num("sleep_hours", float, 0, 16), "steps": num("steps", int, 0, 100000),
+        "distance_km": num("distance_km", float, 0, 100), "exercise": (data.get("exercise") or None),
+        "exercise_minutes": num("exercise_minutes", int, 0, 600), "foods": foods,
+        "water_glasses": num("water_glasses", int, 0, 30), "stress": num("stress", int, 1, 5),
+        "energy": num("energy", int, 1, 5), "mood": data.get("mood") if data.get("mood") in moods else None,
+        "weight_kg": num("weight_kg", float, 25, 300), "period_started": bool(data.get("period_started")),
+        "symptoms": symptoms, "notes": (data.get("notes") or None),
+    }
 
 
 # ---------- Ready-made requests behind the quick-action buttons ----------

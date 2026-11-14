@@ -17,6 +17,8 @@ import coach
 import food
 import garden
 import journey
+import quicklog
+import reminders
 import samsung
 import storage
 import ui
@@ -112,6 +114,114 @@ elif page == "🏠 Today":
     st.write("")
 
     today_str = date.today().isoformat()
+    glasses = storage.water_today(today_str)
+
+    def run_feedback(day: str, summary_text: str, sleep_hours: float, stress: int) -> None:
+        """Shows your check-in as a chat bubble, gets Tulsi's reply, and saves tomorrow's plan as a checklist."""
+        if sleep_hours and sleep_hours < 6 or stress >= 4:
+            st.warning("🧘 Low sleep or high stress can raise cortisol, which makes your body hold on "
+                       "to weight. Tomorrow is a day for gentle movement and rest, not pushing hard.")
+        me = {"role": "user", "content": summary_text, "time": ui.now_time()}
+        box = st.empty()
+        box.markdown(ui.chat_window([me], typing=True, pop_from=0), unsafe_allow_html=True)
+        try:
+            reply = coach.daily_feedback(profile, storage.recent_checkins(7), day)
+            text, items = coach.extract_plan(reply)
+            if items:
+                tomorrow = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
+                storage.save_plan(tomorrow, day, items)
+                st.session_state.plan_saved = True
+            box.empty()
+            st.session_state.feedback = [me] + ui.coach_bubbles(text)
+            st.session_state.feedback_new = True
+            storage.save_chat(storage.load_chat() + st.session_state.feedback)  # also appears in the chat
+        except coach.CoachError as err:
+            box.empty()
+            show_error(err)
+
+    # ----- Row 1: today's plan  |  just tell Tulsi -----
+    plan_col, tell_col = st.columns([2, 3])
+    with plan_col.container(border=True, key="ck_plan"):
+        plan = storage.load_plans().get(today_str)
+        ui.card_header("📋", "Today's plan from Tulsi",
+                       "Tick them off as you go" if plan else "Check in tonight and Tulsi makes tomorrow's plan",
+                       tint="#EDE2FB")
+        if plan:
+            for i, item in enumerate(plan["items"]):
+                st.checkbox(item["text"], value=item.get("done", False), key=f"plan_{today_str}_{i}",
+                            on_change=lambda d=today_str, i=i: storage.set_plan_item(d, i, st.session_state[f"plan_{d}_{i}"]))
+            done = sum(1 for i in plan["items"] if i.get("done"))
+            if done == len(plan["items"]):
+                st.markdown(ui.card("🎉 All done!", "Tulsi is so proud of you. Rest well tonight 💜"), unsafe_allow_html=True)
+            else:
+                st.caption(f"{done} of {len(plan['items'])} done. Small steps count. 🌱")
+        else:
+            st.caption("Tulsi's plans are always 3 tiny steps: one for movement, one for food, one for sleep.")
+        ft = journey.follow_through(7)
+        if ft["total"]:
+            st.caption(f"This week: {ft['done']} of {ft['total']} plan steps done ({ft['rate']:.0%}). "
+                       "Tulsi makes plans easier or harder to match what works for you.")
+
+    with tell_col.container(border=True, key="ck_tell"):
+        ui.card_header("💬", "Just tell Tulsi", "Describe your day in your own words, and she'll fill in your check-in",
+                       tint="#FCE8F3")
+        with st.form("quick_log", border=False):
+            said = st.text_area("Your day", label_visibility="collapsed", height=120,
+                                placeholder="e.g. Slept about 6 hours. Walked 30 min after work. Dosa and chai for breakfast, "
+                                            "rice with sambar for lunch. 5 glasses of water. A bit stressed and tired, bloated.")
+            go = st.form_submit_button("✨ Fill in my check-in", type="primary")
+        audio = st.audio_input("🎙️ Or say it out loud") if hasattr(st, "audio_input") else None
+        spoken = None
+        if audio is not None and st.session_state.get("last_day_audio") != hash(audio.getvalue()):
+            st.session_state.last_day_audio = hash(audio.getvalue())
+            with st.spinner("Listening..."):
+                try:
+                    spoken = coach.transcribe(audio.getvalue(), audio.type or "audio/wav")
+                except coach.CoachError as err:
+                    show_error(err)
+        words = spoken or (said.strip() if go else "")
+        if words:
+            with st.spinner("Tulsi is reading about your day..."):
+                try:
+                    st.session_state.quick = {"day": today_str, "parsed": coach.parse_day(words), "words": words}
+                except coach.CoachError as err:
+                    show_error(err)
+
+    # ----- Confirm what Tulsi understood -----
+    quick = st.session_state.get("quick")
+    if quick:
+        with st.container(border=True, key="ck_confirm"):
+            ui.card_header("✅", "Here's what I understood", f"“{ui.html.escape(quick['words'][:160])}”", tint="#E7F4EC")
+            chips = quicklog.understood(quick["parsed"])
+            if chips:
+                st.markdown('<div class="chips" style="gap:.5rem">' + "".join(
+                    f'<span class="chip" style="font-size:.95rem !important;padding:.35rem .8rem">{ui.html.escape(c)}</span>'
+                    for c in chips) + "</div>", unsafe_allow_html=True)
+                st.caption("Anything you didn't mention stays as it was (Samsung data, earlier entries).")
+                b1, b2, _ = st.columns([2, 2, 3])
+                if b1.button("✅ Looks right, save it", type="primary", key="quick_save"):
+                    entry = quicklog.save(quick["day"], quick["parsed"])
+                    del st.session_state.quick
+                    st.success("Saved to your check-in! 🎉")
+                    run_feedback(quick["day"], quicklog.summary(quick["day"], entry),
+                                 float(entry.get("sleep_hours") or 0), int(entry.get("stress") or 2))
+                if b2.button("✏️ Not quite, discard", key="quick_discard"):
+                    del st.session_state.quick
+                    st.rerun()
+            else:
+                st.info("I couldn't find anything to log in that. Try mentioning sleep, food, exercise, water or how you feel.")
+                if st.button("OK", key="quick_ok"):
+                    del st.session_state.quick
+                    st.rerun()
+
+    if st.session_state.get("feedback"):
+        pop = 1 if st.session_state.pop("feedback_new", False) else None
+        st.markdown(ui.chat_window(st.session_state.feedback, pop_from=pop), unsafe_allow_html=True)
+        if st.session_state.pop("plan_saved", False) or pop:
+            st.caption("📋 Tulsi's 3 steps are saved as tomorrow's checklist.")
+        st.caption("💬 Want to talk more? Continue in **Chat with Tulsi**.")
+
+    # ----- Row 2: Tulsi, cycle and water -----
     left, right = st.columns([1, 2])
     glasses = storage.water_today(today_str)
     with left:
@@ -143,113 +253,107 @@ elif page == "🏠 Today":
         q1.button("🆘 Having a craving?", key="to_crave", on_click=go_to, args=("🆘 Craving SOS",))
         q2.button("🌡️ Log PCOS symptoms", key="to_sym", on_click=go_to, args=("🌡️ Symptoms",))
 
+
     if not profile:
         st.info("Tip: fill in your **🩺 Health profile** first so your coach can personalise advice.")
 
-    day = st.date_input("Date", value=date.today(), max_value=date.today()).isoformat()
-    existing = storage.load_checkins().get(day, {})
-    sh = storage.load_samsung().get(day, {})  # imported Samsung Health data for this day
+    # ----- The detailed check-in, for when you want to fill things in by hand -----
+    with st.expander("📝 Detailed check-in: fill in everything by hand", expanded=False):
+        day = st.date_input("Date", value=date.today(), max_value=date.today()).isoformat()
+        existing = storage.load_checkins().get(day, {})
+        sh = storage.load_samsung().get(day, {})  # imported Samsung Health data for this day
 
-    def prefill(key, sh_key, default):
-        """Use the saved check-in value, else the Samsung value, else a default."""
-        return existing.get(key, sh.get(sh_key, default))
+        def prefill(key, sh_key, default):
+            """Use the saved check-in value, else the Samsung value, else a default."""
+            return existing.get(key, sh.get(sh_key, default))
 
-    with st.form("checkin", border=False):
-        top_left, top_right = st.columns(2)
-        with top_left.container(border=True, key="ck_sleep"):
-            ui.card_header("😴", "Sleep & activity",
-                           "✅ Filled in from Samsung Health" if sh else "Copy these from Samsung Health, or import on 📊 Progress",
-                           tint="#E5F2FD")
-            sleep_hours = st.number_input("Sleep (hours)", 0.0, 16.0, float(prefill("sleep_hours", "sleep_hours", 7.0)), 0.5)
-            c1, c2 = st.columns(2)
-            steps = c1.number_input("Steps", 0, 100000, int(prefill("steps", "steps", 0)), 500)
-            distance_km = c2.number_input("Distance (km)", 0.0, 100.0, float(prefill("distance_km", "distance_km", 0.0)), 0.5)
+        with st.form("checkin", border=False):
+            top_left, top_right = st.columns(2)
+            with top_left.container(border=True, key="ck_sleep"):
+                ui.card_header("😴", "Sleep & activity",
+                               "✅ Filled in from Samsung Health" if sh else "Copy these from Samsung Health, or import on 📊 Progress",
+                               tint="#E5F2FD")
+                sleep_hours = st.number_input("Sleep (hours)", 0.0, 16.0, float(prefill("sleep_hours", "sleep_hours", 7.0)), 0.5)
+                c1, c2 = st.columns(2)
+                steps = c1.number_input("Steps", 0, 100000, int(prefill("steps", "steps", 0)), 500)
+                distance_km = c2.number_input("Distance (km)", 0.0, 100.0, float(prefill("distance_km", "distance_km", 0.0)), 0.5)
 
-        with top_right.container(border=True, key="ck_food"):
-            scanned = storage.day_calories(day)
-            ui.card_header("🍽️", "Food & exercise",
-                           f"📸 {scanned} kcal from your food scans" if scanned else "Scan meals on 📸 Food scan to fill this in",
-                           tint="#FEF0E1")
-            calories = st.number_input(
-                "Calories eaten today (approx.)", 0, 10000, scanned or int(existing.get("calories", 0)), 50,
-                help="Filled in automatically from 📸 Food scan. You can also type an estimate.",
-            )
-            c4, c5 = st.columns([3, 2])
-            default_ex = f"Walk ({sh['workout_km']} km)" if sh.get("workout_min") else ""
-            exercise = c4.text_input("Exercise done", existing.get("exercise", default_ex), placeholder="e.g. walk, yoga")
-            exercise_minutes = c5.number_input("Minutes", 0, 600, int(prefill("exercise_minutes", "workout_min", 0)), 5)
-
-        with st.container(border=True, key="ck_feel"):
-            ui.card_header("💭", "How you feel", "There are no wrong answers here", tint="#FCE8F3")
-            c6, c7 = st.columns(2)
-            stress = c6.slider("Stress  ·  1 = calm, 5 = very stressed", 1, 5, int(existing.get("stress", 2)))
-            energy = c7.slider("Energy  ·  1 = exhausted, 5 = great", 1, 5, int(existing.get("energy", 3)))
-            moods = ["😊 Good", "🙂 Okay", "😐 Meh", "😔 Low", "😣 Frustrated"]
-            mood = st.radio("Mood", moods, index=moods.index(existing["mood"]) if existing.get("mood") in moods else 1, horizontal=True)
-            c8, c9 = st.columns([3, 1])
-            notes = c8.text_area("Anything else? (cravings, period, how you're feeling...)", existing.get("notes", ""), height=110)
-            with c9:
-                weight_kg = st.number_input(
-                    "Weight (kg, optional)", 0.0, 300.0, float(prefill("weight_kg", "weight_kg", 0.0)), 0.1,
-                    help="Optional. Once a week is plenty. Daily weight goes up and down with water, periods and salt.",
+            with top_right.container(border=True, key="ck_food"):
+                scanned = storage.day_calories(day)
+                ui.card_header("🍽️", "Food & exercise",
+                               f"📸 {scanned} kcal from your food scans" if scanned else "Scan meals on 📸 Food scan to fill this in",
+                               tint="#FEF0E1")
+                calories = st.number_input(
+                    "Calories eaten today (approx.)", 0, 10000, scanned or int(existing.get("calories", 0)), 50,
+                    help="Filled in automatically from 📸 Food scan. You can also type an estimate.",
                 )
-                period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
+                c4, c5 = st.columns([3, 2])
+                default_ex = f"Walk ({sh['workout_km']} km)" if sh.get("workout_min") else ""
+                exercise = c4.text_input("Exercise done", existing.get("exercise", default_ex), placeholder="e.g. walk, yoga")
+                exercise_minutes = c5.number_input("Minutes", 0, 600, int(prefill("exercise_minutes", "workout_min", 0)), 5)
 
-        submitted = st.form_submit_button("Save & get my coach's feedback ✨", type="primary")
+            with st.container(border=True, key="ck_feel"):
+                ui.card_header("💭", "How you feel", "There are no wrong answers here", tint="#FCE8F3")
+                c6, c7 = st.columns(2)
+                stress = c6.slider("Stress  ·  1 = calm, 5 = very stressed", 1, 5, int(existing.get("stress", 2)))
+                energy = c7.slider("Energy  ·  1 = exhausted, 5 = great", 1, 5, int(existing.get("energy", 3)))
+                moods = ["😊 Good", "🙂 Okay", "😐 Meh", "😔 Low", "😣 Frustrated"]
+                mood = st.radio("Mood", moods, index=moods.index(existing["mood"]) if existing.get("mood") in moods else 1, horizontal=True)
+                c8, c9 = st.columns([3, 1])
+                notes = c8.text_area("Anything else? (cravings, period, how you're feeling...)", existing.get("notes", ""), height=110)
+                with c9:
+                    weight_kg = st.number_input(
+                        "Weight (kg, optional)", 0.0, 300.0, float(prefill("weight_kg", "weight_kg", 0.0)), 0.1,
+                        help="Optional. Once a week is plenty. Daily weight goes up and down with water, periods and salt.",
+                    )
+                    period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
 
-    if submitted:
-        if period_started:
-            storage.add_period(day)
-        storage.save_checkin(day, {
-            "sleep_hours": sleep_hours, "steps": steps, "distance_km": distance_km,
-            "calories": calories, "exercise": exercise, "exercise_minutes": exercise_minutes,
-            "stress": stress, "energy": energy, "mood": mood, "notes": notes,
-            "foods": storage.day_foods(day), "weight_kg": weight_kg or None,
-        })
-        st.success("Check-in saved! 🎉")
+            submitted = st.form_submit_button("Save & get my coach's feedback ✨", type="primary")
 
-        # Gentle, rule-based heads-up shown before the AI reply
-        if sleep_hours < 6 or stress >= 4:
-            st.warning(
-                "🧘 Low sleep or high stress can raise cortisol, which makes your body hold on "
-                "to weight. Tomorrow is a day for gentle movement and rest, not pushing hard."
-            )
+        if submitted:
+            if period_started:
+                storage.add_period(day)
+            entry = {
+                "sleep_hours": sleep_hours, "steps": steps, "distance_km": distance_km,
+                "calories": calories, "exercise": exercise, "exercise_minutes": exercise_minutes,
+                "stress": stress, "energy": energy, "mood": mood, "notes": notes,
+                "foods": storage.day_foods(day), "weight_kg": weight_kg or None,
+            }
+            storage.save_checkin(day, entry)
+            st.success("Check-in saved! 🎉")
+            run_feedback(day, quicklog.summary(day, entry), sleep_hours, stress)
+            st.rerun()
 
-        summary = (f"📋 My check-in for {day}\n"
-                   f"😴 {sleep_hours:g}h sleep · 👟 {steps:,} steps · 📍 {distance_km:g} km\n"
-                   f"🍽️ {calories or '–'} kcal · 🏃‍♀️ {exercise or 'no exercise'}"
-                   f"{f' ({exercise_minutes} min)' if exercise_minutes else ''}\n"
-                   f"Stress {stress}/5 · Energy {energy}/5 · {mood}"
-                   f"{chr(10) + '📝 ' + notes if notes else ''}")
-        me = {"role": "user", "content": summary, "time": ui.now_time()}
-        box = st.empty()
-        box.markdown(ui.chat_window([me], typing=True, pop_from=0), unsafe_allow_html=True)
-        try:
-            feedback = coach.daily_feedback(profile, storage.recent_checkins(7), day)
-            box.empty()  # replaced by the full conversation below
-            st.session_state.feedback = [me] + ui.coach_bubbles(feedback)
-            st.session_state.feedback_new = True
-            storage.save_chat(storage.load_chat() + st.session_state.feedback)  # also appears in the chat
-        except coach.CoachError as err:
-            box.empty()
-            show_error(err)
-
-    if st.session_state.get("feedback"):
-        pop = 1 if st.session_state.pop("feedback_new", False) else None
-        st.markdown(ui.chat_window(st.session_state.feedback, pop_from=pop), unsafe_allow_html=True)
-        st.caption("💬 Want to talk more? Continue in **Chat with Tulsi**.")
-
-    # This week's summary
+    # ----- This week -----
     week = storage.recent_checkins(7)
     if week:
-        st.divider()
-        st.subheader("📅 Your week")
+        ui.section("📅 Your week")
         avg = lambda k: sum(float(c.get(k, 0) or 0) for c in week.values()) / len(week)
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Avg sleep", f"{avg('sleep_hours'):.1f} h")
-        m2.metric("Avg steps", f"{avg('steps'):,.0f}")
-        m3.metric("Days checked in", f"{len(week)} / 7")
+        ft = journey.follow_through(7)
+        st.markdown(ui.tiles([
+            ("😴 AVG SLEEP", f"{avg('sleep_hours'):.1f} h", "per night"),
+            ("👟 AVG STEPS", f"{avg('steps'):,.0f}", "per day"),
+            ("✅ CHECK-INS", f"{len(week)} / 7", "days this week"),
+            ("📋 PLAN STEPS", f"{ft['done']} / {ft['total']}" if ft["total"] else "–", "done this week"),
+        ]), unsafe_allow_html=True)
 
+    # ----- Reminders on your phone -----
+    with st.expander("⏰ Daily reminders on your phone"):
+        st.caption("Pick your reminders, download the file, and your phone's calendar will remind you every day, "
+                   "even when FitBuddy is closed.")
+        chosen = []
+        cols = st.columns(3)
+        for i, (key, title, hhmm, desc) in enumerate(reminders.DEFAULTS):
+            with cols[i % 3]:
+                on = st.checkbox(title, value=True, key=f"rem_{key}")
+                t = st.time_input("Time", value=datetime.strptime(hhmm, "%H:%M").time(), key=f"remt_{key}",
+                                  label_visibility="collapsed", step=900)
+                if on:
+                    chosen.append((title, t.strftime("%H:%M"), desc))
+        st.download_button("📅 Download my reminders", reminders.build_ics(chosen), file_name="fitbuddy_reminders.ics",
+                           mime="text/calendar", type="primary", disabled=not chosen)
+        st.markdown("**On your phone:** send this file to yourself (WhatsApp or email), tap it, and choose "
+                    "**Calendar → Add / Import**.  \n**On Google Calendar (laptop):** Settings → Import & export → Import.")
 
 # ---------------- Page: Food scan ----------------
 
@@ -605,7 +709,7 @@ elif page == "📊 Progress":
             items.append(("😴 SLEEP", f"{sleep.mean():.1f} h", "average per night"))
         st.markdown(ui.tiles(items), unsafe_allow_html=True)
 
-        def chart(name, title, unit, how="mean", per_period=True, decimals=0, where=st, data=None):
+        def chart(name, title, unit, how="mean", per_period=True, decimals=0, where=st, data=None, trend=None):
             data = col(name) if data is None else data
             if data.empty:
                 return
@@ -613,14 +717,23 @@ elif page == "📊 Progress":
                 data = getattr(data.resample(group), how)().dropna()
                 sub = f"{'Total' if how == 'sum' else 'Average'} per {label} · hover a dot for details"
             else:
-                sub = "Your whole journey · hover a dot for details"
+                sub = ("Bold line = your 7-day average (the number that matters) · faint dots = each weigh-in"
+                       if trend else "Your whole journey · hover a dot for details")
             points = list(zip(data.index.to_pydatetime(), data.values))
-            body = ui.line_chart_svg(points, unit, decimals, wide=where is st)
+            body = ui.line_chart_svg(points, unit, decimals, wide=where is st, trend=trend)
             if len(points) < 2:
                 body += '<div class="st">Not enough data yet for a line. Keep logging! 🌱</div>'
             where.markdown(ui.chart_card(title, sub, body), unsafe_allow_html=True)
 
-        chart("weight_kg", "⚖️ Weight", "kg", per_period=False, decimals=1, data=all_weights)
+        trend = [(pd.Timestamp(d).to_pydatetime(), v) for d, v in journey.weight_trend(rows)]
+        why = journey.scale_reasons(rows)
+        if why:
+            change = (f" Your 7-day average is {why['trend_now']:g} kg"
+                      + (f" ({why['trend_change']:+g} kg vs a week ago)." if why["trend_change"] is not None else "."))
+            st.markdown(ui.card(f"🤍 The scale went up {why['up_by']:g} kg. Here's what's likely going on",
+                                "<br>".join(ui.html.escape(r) for r in why["reasons"]) + "<br><b>" + change + "</b>"),
+                        unsafe_allow_html=True)
+        chart("weight_kg", "⚖️ Weight", "kg", per_period=False, decimals=1, data=all_weights, trend=trend or None)
         # the other charts sit side by side in pairs; only the ones with data are shown, so there are no gaps
         specs = [("workout_min", "🚶‍♀️ Walking minutes", "min", "sum", 0),
                  ("workout_km", "📍 Distance walked", "km", "sum", 1),

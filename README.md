@@ -6,18 +6,6 @@ It's built for people with PCOS and anyone who has faced body-shaming.
 I built it from my own experience: I went from 80 kg to 63 kg in a year using AI as my coach,
 and my cycle became regular again.
 
-   ## Screenshots
-
-   | Home | Daily check-in |
-   |---|---|
-   | ![Home](screenshots/home.png) | ![Check-in](screenshots/checkin.png) |
-
-   | Chat with Tulsi | Food scan |
-   |---|---|
-   | ![Chat](screenshots/chat.png) | ![Food scan](screenshots/food-scan.png) |
-
-   ![My garden](screenshots/garden.png)
-
 ## Features (so far)
 - **Health profile**: conditions (e.g. PCOS), medications, cycle, diet, goals and limitations.
 - **Medical report upload**: the AI summarises key findings from a PDF report, and you check them before saving.
@@ -43,6 +31,17 @@ and my cycle became regular again.
 - **🌡️ Symptoms page**: log 7 PCOS symptoms, see a 30-day grid and averages by cycle phase. Patterns with sleep, stress, cycle phase and water are checked with a permutation test plus a correction for testing many things at once (Benjamini–Hochberg), so chance findings aren't shown as real.
 - **🩺 Doctor report**: a one-page PDF summary of weight, cycle, sleep, activity and symptoms for appointments.
 - **🌿 Tulsi mascot**: bounces in the corner, waves, and smiles with floating hearts when you click her.
+
+### Built for real daily use
+- **💬 Just tell Tulsi**: describe your day in your own words (typed or spoken), like *"slept 6 hours, walked 30 min, dosa for
+  breakfast, bit stressed"*. Tulsi fills in your check-in, meals, water and symptoms. You confirm with one tap. Logging takes 10 seconds.
+- **📋 Plans that close the loop**: Tulsi's 3 steps for tomorrow become a checklist. The next evening she celebrates what you
+  did, never guilts you about what you didn't, and makes plans **smaller when you're struggling and bigger when you're
+  flying**, based on your real follow-through.
+- **⏰ Phone reminders**: download a calendar file, and your phone reminds you every day (plan, water, check-in, wind-down),
+  even when the app is closed. No server needed.
+- **⚖️ A calmer weight view**: a bold 7-day average line instead of daily jumps. When the scale goes up, FitBuddy explains
+  likely temporary reasons from your own data (cycle phase, short sleep, stress, a bigger meal, a long workout).
 
 ## Responsible AI design
 - Looks at the whole week. It never tells you to "burn off" food with exercise.

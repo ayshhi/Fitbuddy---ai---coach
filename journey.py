@@ -340,3 +340,72 @@ def craving_patterns() -> dict:
 def daily_km(rows: dict) -> dict:
     """km walked per day: the larger of the day's total distance and its recorded walks."""
     return {d: max(float(r.get("distance_km", 0) or 0), float(r.get("workout_km", 0) or 0)) for d, r in rows.items()}
+
+
+# ---------------- Tulsi's plans: how much of them actually happens ----------------
+
+def follow_through(days: int = 7, today: date | None = None) -> dict:
+    """Share of plan items ticked off over the last `days` days (today included)."""
+    today = today or date.today()
+    start = (today - timedelta(days=days - 1)).isoformat()
+    items = [i for d, p in storage.load_plans().items() if start <= d <= today.isoformat() for i in p["items"]]
+    done = sum(1 for i in items if i.get("done"))
+    return {"done": done, "total": len(items), "rate": done / len(items) if items else None}
+
+
+# ---------------- A calmer view of weight ----------------
+
+def weight_trend(rows: dict) -> list[tuple[str, float]]:
+    """For each weigh-in, the average of all weigh-ins in the 7 days up to it.
+    This smooths out daily ups and downs from water, salt and hormones."""
+    w = weights(rows)
+    out = []
+    for d, _ in w:
+        end = date.fromisoformat(d)
+        window = [v for dd, v in w if end - timedelta(days=6) <= date.fromisoformat(dd) <= end]
+        out.append((d, round(sum(window) / len(window), 2)))
+    return out
+
+
+def scale_reasons(rows: dict) -> dict | None:
+    """If the latest weigh-in is higher than the one before, list likely, temporary reasons from the data."""
+    w = weights(rows)
+    if len(w) < 2 or w[-1][1] - w[-2][1] < 0.3:
+        return None
+    last_day = date.fromisoformat(w[-1][0])
+    up = round(w[-1][1] - w[-2][1], 1)
+    reasons = []
+
+    phase = (cycle_info(last_day) or {}).get("phase")
+    if phase in ("Luteal", "Period"):
+        reasons.append(f"🌙 You're in your {phase.lower()} phase. Hormones often make the body hold extra water "
+                       "around this time, sometimes a kilo or more, and it goes once your period settles.")
+
+    def recent(key, n=3):
+        vals = [float(rows.get((last_day - timedelta(days=i)).isoformat(), {}).get(key) or 0) for i in range(1, n + 1)]
+        vals = [v for v in vals if v]
+        return sum(vals) / len(vals) if vals else None
+
+    sleep = recent("sleep_hours")
+    if sleep and sleep < 6.5:
+        reasons.append(f"😴 You averaged {sleep:.1f} h of sleep over the last few nights. Short sleep raises cortisol "
+                       "and can make the body hold on to water.")
+    stress = [int(storage.load_checkins().get((last_day - timedelta(days=i)).isoformat(), {}).get("stress") or 0) for i in range(0, 3)]
+    stress = [s for s in stress if s]
+    if stress and sum(stress) / len(stress) >= 4:
+        reasons.append("😣 Your stress has been high lately. Stress hormones can cause temporary water retention.")
+    cal_yday = float(rows.get((last_day - timedelta(days=1)).isoformat(), {}).get("calories") or 0)
+    cal_week = [float(rows.get((last_day - timedelta(days=i)).isoformat(), {}).get("calories") or 0) for i in range(2, 9)]
+    cal_week = [c for c in cal_week if c]
+    if cal_yday and cal_week and cal_yday > 1.3 * (sum(cal_week) / len(cal_week)):
+        reasons.append("🍛 Yesterday was a bigger food day. Extra food, salt and carbs hold water for a day or two. "
+                       "That's not fat, and it passes.")
+    workout = float(rows.get((last_day - timedelta(days=1)).isoformat(), {}).get("workout_min") or 0)
+    if workout >= 45:
+        reasons.append("💪 You had a longer workout yesterday. Muscles hold extra water while they recover.")
+    reasons.append("⚖️ Day-to-day weight naturally moves around by up to a kilo from water, salt and digestion. "
+                   "The 7-day trend is the number that matters.")
+    trend = weight_trend(rows)
+    week_ago = [v for d, v in trend if date.fromisoformat(d) <= last_day - timedelta(days=7)]
+    return {"up_by": up, "reasons": reasons, "trend_now": round(trend[-1][1], 1),
+            "trend_change": round(trend[-1][1] - week_ago[-1], 1) if week_ago else None}

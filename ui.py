@@ -356,14 +356,18 @@ def tiles(items: list[tuple[str, str, str]]) -> str:
 
 
 def line_chart_svg(points: list[tuple], unit: str = "", decimals: int = 0, color: str = "#7B3FBF",
-                   wide: bool = False) -> str:
+                   wide: bool = False, trend: list[tuple] | None = None) -> str:
     """A soft area + line chart drawn in SVG. points: [(datetime, value), ...] sorted by date.
-    Hover any dot to see its date and value."""
+    Hover any dot to see its date and value.
+    With `trend`, the points are shown as faint dots and the trend is the bold line (used for weight)."""
     pts = [(d, float(v)) for d, v in points if v == v]  # drop NaN
     if not pts:
         return ""
+    raw_pts = pts
+    if trend:
+        pts = [(d, float(v)) for d, v in trend]
     W, H, L, R, T, B = (1180, 300, 50, 24, 24, 32) if wide else (580, 230, 46, 18, 22, 30)
-    vals = [v for _, v in pts]
+    vals = [v for _, v in pts] + [v for _, v in raw_pts]
     lo, hi = min(vals), max(vals)
     pad = (hi - lo) * 0.15 or max(abs(hi) * 0.1, 1)
     lo, hi = lo - pad, hi + pad
@@ -399,9 +403,14 @@ def line_chart_svg(points: list[tuple], unit: str = "", decimals: int = 0, color
     if len(pts) > 1:
         out.append(f'<polygon points="{x(pts[0][0]):.1f},{H - B} {line} {x(pts[-1][0]):.1f},{H - B}" fill="url(#{gid})"/>')
         out.append(f'<polyline points="{line}" fill="none" stroke="{color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>')
+    if trend:  # the actual weigh-ins, as faint dots behind the trend line
+        for d, v in raw_pts:
+            out.append(f'<circle cx="{x(d):.1f}" cy="{y(v):.1f}" r="4" fill="{color}" opacity=".25">'
+                       f'<title>{d.strftime("%d %b %Y")}: weighed {fmt(v)} {unit}</title></circle>')
     for d, v in pts:
+        label = "7-day average" if trend else ""
         out.append(f'<circle cx="{x(d):.1f}" cy="{y(v):.1f}" r="{4 if len(pts) < 40 else 2.5}" fill="#fff" stroke="{color}" stroke-width="2">'
-                   f'<title>{d.strftime("%d %b %Y")}: {fmt(v)} {unit}</title></circle>')
+                   f'<title>{d.strftime("%d %b %Y")}: {label} {fmt(v)} {unit}</title></circle>')
     # highlight latest value
     d, v = pts[-1]
     out.append(f'<circle cx="{x(d):.1f}" cy="{y(v):.1f}" r="6" fill="{color}"/>'
@@ -792,6 +801,18 @@ div[data-testid="stExpander"] summary p { font-weight: 700 !important; color: #4
 .st-key-ck_sleep::before { background: linear-gradient(90deg, #7CC4F5, #9B8CF0); }
 .st-key-ck_food::before { background: linear-gradient(90deg, #F7B267, #F28B82); }
 .st-key-ck_feel::before { background: linear-gradient(90deg, #E58FC7, #C38BEA); }
+
+/* Tulsi's plan: each step is a tappable row that gets crossed off when ticked */
+.st-key-ck_plan [data-testid="stCheckbox"] label { width: 100%; box-sizing: border-box; background: #FFFFFF; border: 1.5px solid #E6DDF3;
+  border-radius: 16px; padding: .7rem .9rem; transition: background .2s, border-color .2s; }
+.st-key-ck_plan [data-testid="stCheckbox"] label:hover { border-color: #C38BEA; }
+.st-key-ck_plan [data-testid="stCheckbox"] label:has(input:checked) { background: #EEF8F2; border-color: #A8DDBE; }
+.st-key-ck_plan [data-testid="stCheckbox"] label:has(input:checked) p { text-decoration: line-through; color: #6B8F7A !important; }
+.st-key-ck_plan [data-testid="stCheckbox"] p { font-size: 1.05rem !important; font-weight: 600; }
+.st-key-ck_plan::before { content:""; position:absolute; left:0; top:0; right:0; height:6px; background: linear-gradient(90deg, #9B6BD6, #3FAE74); }
+.st-key-ck_tell::before { content:""; position:absolute; left:0; top:0; right:0; height:6px; background: linear-gradient(90deg, #E58FC7, #F7B267); }
+.st-key-ck_confirm::before { content:""; position:absolute; left:0; top:0; right:0; height:6px; background: linear-gradient(90deg, #3FAE74, #7CC4F5); }
+.st-key-ck_plan, .st-key-ck_tell, .st-key-ck_confirm { position: relative; overflow: hidden; }
 
 /* card headers with an icon tile */
 .ck-head { display:flex; align-items:center; gap:.9rem; margin: .2rem 0 .4rem; }
