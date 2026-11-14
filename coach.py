@@ -615,20 +615,33 @@ def transcribe(audio_bytes: bytes, mime: str = "audio/wav") -> str:
         "generationConfig": {"temperature": 0},
     }
     headers = {"x-goog-api-key": os.getenv("GEMINI_API_KEY", "").strip(), "Content-Type": "application/json"}
-    last = "Couldn't understand the voice message."
+    last = "Couldn't understand the voice message. Try again, a little closer to the microphone."
     for model in _env_list("GEMINI_MODEL", "gemini-3.1-flash-lite,gemini-3.5-flash"):
         try:
             r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                               headers=headers, json=body, timeout=60)
-            if r.status_code == 200:
+        except requests.RequestException:
+            last = "Couldn't reach Gemini to understand your voice. Check your internet connection."
+            continue
+        if r.status_code == 200:
+            try:
                 parts = r.json()["candidates"][0]["content"]["parts"]
                 text = "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
-                if text:
-                    return text
-            elif r.status_code == 429:
-                last = "The free Gemini limit was reached. Wait a minute and try again."
-        except (requests.RequestException, KeyError, IndexError, ValueError):
-            continue
+            except (KeyError, IndexError, ValueError, TypeError):
+                text = ""
+            if text:
+                return text
+            last = "Tulsi heard silence. Check that your browser can use the microphone, then try again."
+        elif r.status_code == 429:
+            last = "The free Gemini limit was reached. Wait a minute and try again."
+        elif r.status_code in (400, 403) and "API key" in r.text:
+            last = "Your Gemini key was rejected. Check GEMINI_API_KEY in your .env file."
+        else:
+            try:
+                detail = r.json().get("error", {}).get("message", "")[:160]
+            except ValueError:
+                detail = r.text[:160]
+            last = f"Gemini couldn't read the recording ({model}, error {r.status_code}: {detail})"
     raise CoachError(last)
 
 

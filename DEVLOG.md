@@ -294,6 +294,11 @@ deleting the health profile resets her growth and flowers (no goal, no flowers);
 recalculates her from what's left, keeping only flowers that a logged weight still reaches; and a new "Start completely
 fresh" button deletes every data file, behind a confirmation tick.
 
+**Voice that actually works.** The microphone and any error messages lived inside a small pop-up. Stopping a recording
+reloads the page and closes the pop-up, so when something failed, nothing seemed to happen. Now the 🎙️ button opens a
+voice panel under the message bar: record, and Tulsi answers out loud (gTTS), with a play button in case the browser
+blocks autoplay. Errors now say what went wrong (no microphone, free limit reached, key rejected).
+
 ---
 
 ## What I learned

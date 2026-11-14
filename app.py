@@ -1471,6 +1471,7 @@ elif page == "💬 Chat with Tulsi":
     # ----- The message bar: stays at the bottom of the screen -----
     with st.container(key="composer"):
         c_plus, c_form, c_mic = st.columns([1, 12, 1], vertical_alignment="center", gap="small")
+        voice_open = st.session_state.get("voice_open", False)
 
         with c_plus.popover("✨", help="Plans & ideas"):
             st.markdown("**Plans for you**")
@@ -1488,16 +1489,28 @@ elif page == "💬 Chat with Tulsi":
             typed = f1.text_input("Message", placeholder="Message Tulsi...", label_visibility="collapsed")
             sent = f2.form_submit_button("➤", type="primary")
 
-        voice_prompt = None
-        with c_mic.popover("🎙️", help="Talk to Tulsi"):
-            speak = st.toggle("🔊 Tulsi speaks her replies", key="speak")
-            audio = st.audio_input("Record a message") if hasattr(st, "audio_input") else None
+        if c_mic.button("✖️" if voice_open else "🎙️", key="voice_btn",
+                        help="Close voice" if voice_open else "Talk to Tulsi with your voice"):
+            st.session_state.voice_open = not voice_open
+            st.rerun()
+
+        # Voice panel: shown right under the message bar (not in a pop-up), so errors are always visible
+        voice_prompt, speak, audio_slot = None, False, None
+        if voice_open:
+            v1, v2 = st.columns([3, 2], vertical_alignment="center")
+            if hasattr(st, "audio_input"):
+                audio = v1.audio_input("🎙️ Tap the mic, speak, then tap the square to stop", key="voice_rec")
+            else:
+                audio = None
+                v1.warning("Voice needs a newer Streamlit. In your terminal run `pip install -U streamlit`, then restart the app.")
+            speak = v2.toggle("🔊 Tulsi speaks her replies", value=True, key="speak")
+            audio_slot = v2.empty()
             if audio is not None:
                 audio_bytes = audio.getvalue()
                 audio_id = hash(audio_bytes)
                 if st.session_state.get("last_audio") != audio_id:  # only handle each recording once
                     st.session_state.last_audio = audio_id
-                    with st.spinner("Listening..."):
+                    with st.spinner("Tulsi is listening..."):
                         try:
                             voice_prompt = "🎙️ " + coach.transcribe(audio_bytes, audio.type or "audio/wav")
                         except coach.CoachError as err:
@@ -1530,7 +1543,7 @@ elif page == "💬 Chat with Tulsi":
             if speak or voice_prompt:
                 st.session_state.voice_reply = ui.speech(reply)
                 if st.session_state.voice_reply is None:
-                    st.caption("🔇 To hear Tulsi, run `pip install gtts` once and restart the app.")
+                    st.warning("🔇 Tulsi couldn't speak. Check your internet, or run `pip install gtts` once and restart the app.")
         except coach.CoachError as err:
             chat.pop()
             flow.markdown(ui.chat_window(chat[max(0, len(chat) - shown):]), unsafe_allow_html=True)
@@ -1538,7 +1551,9 @@ elif page == "💬 Chat with Tulsi":
     ui.scroll_to_bottom()
 
     if st.session_state.get("voice_reply"):
-        st.audio(st.session_state.pop("voice_reply"), format="audio/mp3", autoplay=True)
+        where = audio_slot.container() if audio_slot is not None else st
+        where.audio(st.session_state.pop("voice_reply"), format="audio/mp3", autoplay=True)
+        where.caption("▶️ If you don't hear her, press play. Some browsers block sound until you click.")
 
     if storage.load_chat():
         with st.expander("⚙️ Chat options"):

@@ -58,7 +58,10 @@ header[data-testid="stHeader"] button, header[data-testid="stHeader"] a { pointe
 .block-container { padding-left: 3rem; padding-right: 3rem;
                    max-width: 100% !important; margin: 0 auto; }
 /* the sidebar grows with the app's scale, so menu items don't wrap; you can still drag it wider */
-section[data-testid="stSidebar"] { min-width: calc(16rem * var(--fbz, 1)) !important; max-width: none !important; }
+/* a fixed, comfortable sidebar width that scales with the app (only while it's open, so collapsing still works) */
+section[data-testid="stSidebar"][aria-expanded="true"] { width: calc(17rem * var(--fbz, 1)) !important;
+  min-width: calc(17rem * var(--fbz, 1)) !important; max-width: calc(17rem * var(--fbz, 1)) !important; }
+[data-testid="stSidebarResizeHandle"], div[data-testid="stSidebar"] + div[role="separator"] { display: none !important; }
 section[data-testid="stSidebar"] label p { white-space: nowrap; }
 /* Tulsi in the corner scales with the app too */
 #tulsi-mascot { zoom: var(--fbz, 1); }
@@ -860,7 +863,7 @@ def card_header(icon: str, title: str, subtitle: str = "", tint: str = "#F1EAFB"
 
 def auto_size() -> None:
     """Scales the whole app (text, buttons, cards) to the window width, like browser zoom done automatically.
-    The page is designed for a 1450 px wide window; wider windows (or a zoomed-out browser) get scaled up,
+    The page is designed for a 1450 x 820 px window; wider windows (or a zoomed-out browser) get scaled up,
     so text is never tiny. Streamlit controls the page's base font size, so zoom is used instead of font-size."""
     import streamlit.components.v1 as components
     components.html("""<script>
@@ -869,7 +872,8 @@ def auto_size() -> None:
     let s = d.getElementById('fb-autosize');
     if (!s) { s = d.createElement('style'); s.id = 'fb-autosize'; d.head.appendChild(s); }
     function fit() {
-      const z = Math.max(1, Math.min(2.6, w.innerWidth / 1450));
+      // scale to the window, but never so much that a page no longer fits top to bottom
+      const z = Math.max(1, Math.min(2.6, w.innerWidth / 1450, w.innerHeight / 820));
       s.textContent = ':root { --fbz: ' + z.toFixed(3) + '; }';
     }
     fit();
