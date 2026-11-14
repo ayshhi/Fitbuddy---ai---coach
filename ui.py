@@ -46,7 +46,8 @@ html { font-size: 18px !important; }
 .block-container, [data-testid="stMainBlockContainer"], [data-testid="stSidebarContent"],
 div[role="dialog"], [data-testid="stPopoverBody"] { zoom: var(--fbz, 1); }
 /* no page headers any more, so start content right at the top */
-header[data-testid="stHeader"] { background: transparent !important; height: 2.6rem !important; }
+header[data-testid="stHeader"] { background: transparent !important; height: 2.6rem !important; pointer-events: none; }
+header[data-testid="stHeader"] button, header[data-testid="stHeader"] a { pointer-events: auto; }
 .block-container, [data-testid="stMainBlockContainer"] { padding-top: 1.2rem !important; padding-bottom: 3rem !important; }
 /* on computer screens, keep columns side by side instead of letting them wrap onto new lines */
 @media (min-width: 900px) {
@@ -56,7 +57,15 @@ header[data-testid="stHeader"] { background: transparent !important; height: 2.6
 .stApp { overflow-x: hidden; }
 .block-container { padding-left: 3rem; padding-right: 3rem;
                    max-width: 100% !important; margin: 0 auto; }
-section[data-testid="stSidebar"] { min-width: 17rem !important; }
+/* the sidebar grows with the app's scale, so menu items don't wrap; you can still drag it wider */
+section[data-testid="stSidebar"] { min-width: calc(16rem * var(--fbz, 1)) !important; max-width: none !important; }
+section[data-testid="stSidebar"] label p { white-space: nowrap; }
+/* Tulsi in the corner scales with the app too */
+#tulsi-mascot { zoom: var(--fbz, 1); }
+/* invisible blocks (style sheets, 0-height scripts) shouldn't take up space at the top of the page */
+[data-testid="stElementContainer"]:has(iframe[height="0"]), .element-container:has(iframe[height="0"]),
+[data-testid="stElementContainer"]:has([data-testid="stMarkdownContainer"] > style:only-child),
+.element-container:has([data-testid="stMarkdownContainer"] > style:only-child) { display: none !important; }
 section[data-testid="stSidebar"] label p { font-size: 1.05rem !important; }
 section[data-testid="stSidebar"] * { font-size: 1rem; }
 .stApp p, .stApp label, .stApp li, .stApp input, .stApp textarea, .stApp button { font-size: 1rem !important; }

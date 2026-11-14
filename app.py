@@ -14,6 +14,7 @@ import pandas as pd
 import cards
 import coach
 import crossword
+import cycle
 import diet
 import exercise
 import food
@@ -42,7 +43,7 @@ def show_error(err: Exception) -> None:
 # ---------------- Sidebar navigation ----------------
 
 ui.sidebar_brand()
-PAGES = ["🌈 Home", "🏠 Today", "🔥 Exercise", "🥗 Food & diet", "💬 Chat with Tulsi", "🆘 Craving SOS", "🌡️ Symptoms",
+PAGES = ["🌈 Home", "🏠 Today", "🔥 Exercise", "🥗 Food & diet", "💬 Chat with Tulsi", "🆘 Craving SOS", "🌡️ Symptoms", "🩸 My cycle",
          "🌸 My garden", "🎯 Wellness Bingo", "🧩 Crossword", "📊 Progress", "🩺 Health profile"]
 page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
 
@@ -119,7 +120,7 @@ elif page == "🏠 Today":
     glasses = storage.water_today(today_str)
 
     def run_feedback(day: str, summary_text: str, sleep_hours: float, stress: int) -> None:
-        """Shows your check-in as a chat bubble, gets Tulsi's reply, and saves tomorrow's plan as a checklist."""
+        """Shows your check-in as a chat bubble and gets Tulsi's reply."""
         if sleep_hours and sleep_hours < 6 or stress >= 4:
             st.warning("🧘 Low sleep or high stress can raise cortisol, which makes your body hold on "
                        "to weight. Tomorrow is a day for gentle movement and rest, not pushing hard.")
@@ -128,11 +129,7 @@ elif page == "🏠 Today":
         box.markdown(ui.chat_window([me], typing=True, pop_from=0), unsafe_allow_html=True)
         try:
             reply = coach.daily_feedback(profile, storage.recent_checkins(7), day)
-            text, items = coach.extract_plan(reply)
-            if items:
-                tomorrow = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
-                storage.save_plan(tomorrow, day, items)
-                st.session_state.plan_saved = True
+            text, _ = coach.extract_plan(reply)
             box.empty()
             st.session_state.feedback = [me] + ui.coach_bubbles(text)
             st.session_state.feedback_new = True
@@ -141,32 +138,39 @@ elif page == "🏠 Today":
             box.empty()
             show_error(err)
 
-    plan_icons = [("🏃‍♀️", "Move", "#FF9F1C"), ("🥗", "Eat", "#2EAD6B"), ("😴", "Rest", "#7B3FBF")]
     st.markdown("""<style>
-    [class*="st-key-pc_"] { background:#FFFFFF; border-radius:22px !important; border:1px solid #E6DDF3 !important;
-        padding:.9rem 1.1rem !important; box-shadow:0 6px 18px rgba(78,42,132,.06); transition: transform .15s; }
-    [class*="st-key-pc_"]:hover { transform: translateY(-2px); }
+    [class*="st-key-pc_"] { position:relative; background:#FFFFFF; border-radius:24px !important; border:1px solid #E6DDF3 !important;
+        padding:1rem 1.2rem !important; box-shadow:0 6px 18px rgba(78,42,132,.06); transition: transform .15s, box-shadow .15s; }
+    [class*="st-key-pc_"]:hover { transform: translateY(-3px); box-shadow:0 12px 26px rgba(78,42,132,.12); }
     [class*="st-key-pc_done"] { background:linear-gradient(135deg,#EEF8F2,#F7FCF9) !important; border-color:#BFE6CF !important; }
-    .pc { display:flex; align-items:center; gap:1rem; }
-    .pc .ic { width:3.4rem; height:3.4rem; border-radius:16px; display:flex; align-items:center; justify-content:center;
-              font-size:1.8rem; flex-shrink:0; }
-    .pc .tag { font-size:.8rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
-    .pc .tx { font-weight:600; color:#2A2140; font-size:1.05rem; line-height:1.35; }
+    [class*="st-key-go_"] { position:absolute !important; inset:0; z-index:1; margin:0 !important; }
+    [class*="st-key-go_"] button { width:100% !important; height:100% !important; opacity:0 !important; cursor:pointer; }
+    [class*="st-key-pcb_"] { position:relative; z-index:2; }
+    .pc { display:flex; align-items:center; gap:1.1rem; }
+    .pc .ic { width:3.8rem; height:3.8rem; border-radius:18px; display:flex; align-items:center; justify-content:center;
+              font-size:2rem; flex-shrink:0; }
+    .pc .tag { font-size:.8rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+    .pc .tx { font-weight:600; color:#2A2140; font-size:1.08rem; line-height:1.35; margin:.1rem 0; }
+    .pc .go { font-size:.88rem; font-weight:700; color:#7B3FBF; }
     .pc.done .tx { text-decoration: line-through; color:#5E8C72; }
+    .ci { display:flex; gap:.8rem; align-items:flex-start; margin:.55rem 0; }
+    .ci .t { background:#F1EAFB; color:#4E2A84; font-weight:800; font-size:.8rem; border-radius:99px; padding:.25rem .7rem;
+             white-space:nowrap; margin-top:.15rem; }
+    .ci .w { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:16px; padding:.6rem .9rem; flex:1; color:#2A2140; }
     </style>""", unsafe_allow_html=True)
 
     checkin_col, plan_col = st.columns([1, 1], gap="large")
 
-    # ----- Left: check in -----
+    # ----- Left: check in, as many times as you like -----
     with checkin_col:
         with st.container(border=True, key="ck_tell"):
-            ui.card_header("💬", f"Hey {name}! How was your day?", "Tell Tulsi in your own words, and she'll fill in your check-in",
-                           tint="#FCE8F3")
-            with st.form("quick_log", border=False):
+            ui.card_header("💬", f"Hey {name}! How's your day going?",
+                           "Check in as often as you like: morning, after lunch, at night. Each one adds to today.", tint="#FCE8F3")
+            with st.form("quick_log", border=False, clear_on_submit=True):
                 said = st.text_area("Your day", label_visibility="collapsed", height=120,
-                                    placeholder="e.g. Slept about 6 hours. Walked 30 min after work. Dosa and chai for breakfast, "
-                                                "rice with sambar for lunch. 5 glasses of water. A bit stressed and tired, bloated.")
-                go = st.form_submit_button("✨ Fill in my check-in", type="primary")
+                                    placeholder="e.g. Slept 6 hours. Idli and sambar for breakfast. Did the 15-min warm-up. "
+                                                "3 glasses of water so far. A bit stressed.")
+                go = st.form_submit_button("✨ Check in", type="primary")
             audio = st.audio_input("🎙️ Or say it out loud") if hasattr(st, "audio_input") else None
             spoken = None
             if audio is not None and st.session_state.get("last_day_audio") != hash(audio.getvalue()):
@@ -181,6 +185,7 @@ elif page == "🏠 Today":
                 with st.spinner("Tulsi is reading about your day..."):
                     try:
                         st.session_state.quick = {"day": today_str, "parsed": coach.parse_day(words), "words": words}
+                        st.session_state.pop("feedback", None)
                     except coach.CoachError as err:
                         show_error(err)
 
@@ -198,8 +203,10 @@ elif page == "🏠 Today":
                     b1, b2, _ = st.columns([2, 2, 3])
                     if b1.button("✅ Looks right, save it", type="primary", key="quick_save"):
                         entry = quicklog.save(quick["day"], quick["parsed"])
+                        storage.add_checkin_log(quick["day"], {"time": datetime.now().strftime("%I:%M %p").lstrip("0"),
+                                                               "words": quick["words"], "chips": chips})
                         del st.session_state.quick
-                        st.success("Saved to your check-in! 🎉")
+                        st.success("Saved! Check in again any time today. 🎉")
                         run_feedback(quick["day"], quicklog.summary(quick["day"], entry),
                                      float(entry.get("sleep_hours") or 0), int(entry.get("stress") or 2))
                     if b2.button("✏️ Not quite, discard", key="quick_discard"):
@@ -214,92 +221,81 @@ elif page == "🏠 Today":
         if st.session_state.get("feedback"):
             pop = 1 if st.session_state.pop("feedback_new", False) else None
             st.markdown(ui.chat_window(st.session_state.feedback, pop_from=pop), unsafe_allow_html=True)
-            if st.session_state.pop("plan_saved", False) or pop:
-                st.caption("📋 Tulsi's 3 steps are saved as tomorrow's checklist.")
             st.caption("💬 Want to talk more? Continue in **Chat with Tulsi**.")
 
+        log = storage.load_checkin_log(today_str)
+        if log:
+            st.markdown(f"**🕐 Today's check-ins ({len(log)})**")
+            st.markdown("".join(f'<div class="ci"><span class="t">{ui.html.escape(c["time"])}</span>'
+                                f'<div class="w">{ui.html.escape(c["words"][:220])}</div></div>' for c in reversed(log)),
+                        unsafe_allow_html=True)
 
-    # ----- Right: plans as cards -----
+    # ----- Right: today's plan as Exercise / Eat / Rest cards -----
     with plan_col:
-        plan = storage.load_plans().get(today_str)
+        plans = storage.load_plans()
+        plan = plans.get(today_str)
         tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
-        next_plan = storage.load_plans().get(tomorrow_str)
-        ui.card_header("📋", "Today's plan from Tulsi",
-                       "Tap Done as you go" if plan else "3 tiny steps: movement, food and rest", tint="#EDE2FB")
-        if plan:
-            done_count = 0
-            for i, item in enumerate(plan["items"]):
-                icon, tag, colour = plan_icons[i % 3]
-                done = bool(item.get("done"))
-                done_count += done
-                with st.container(key=f"pc_{'done' if done else 'todo'}_{i}"):
-                    c1, c2 = st.columns([5, 1], vertical_alignment="center")
-                    c1.markdown(f'<div class="pc {"done" if done else ""}"><div class="ic" style="background:{colour}22">{icon}</div>'
-                                f'<div><div class="tag" style="color:{colour}">{"✓ Done" if done else tag}</div>'
-                                f'<div class="tx">{ui.html.escape(item["text"])}</div></div></div>', unsafe_allow_html=True)
+        next_plan = plans.get(tomorrow_str)
+        ui.card_header("📋", "Today's plan", "Tap Exercise or Eat to open that page. Tap ✅ when it's done.", tint="#EDE2FB")
+
+        b1, b2 = st.columns(2)
+        make_today = b1.button("🔄 New plan for today" if plan else "✨ Create today's plan", type="primary", key="make_plan",
+                               use_container_width=True)
+        make_tomorrow = b2.button("🔄 New plan for tomorrow" if next_plan else "🌙 Create tomorrow's plan", key="make_tomorrow",
+                                  use_container_width=True)
+        if make_today or make_tomorrow:
+            when = "today" if make_today else "tomorrow"
+            with st.spinner(f"Tulsi is planning {when}..."):
+                try:
+                    items = coach.plan_for_today(profile, storage.recent_checkins(7), when=when)
+                    storage.save_plan(today_str if make_today else tomorrow_str, today_str, items)
+                    st.toast(f"{when.title()}'s plan is ready! 🌱")
+                    st.rerun()
+                except coach.CoachError as err:
+                    show_error(err)
+
+        routine_name, _ = exercise.suggested_routine()
+        target = diet.target(profile)
+        cards_spec = [
+            ("🏃‍♀️", "Exercise", "#FF9F1C", "🔥 Exercise", f"Tulsi suggests: {routine_name}", "Open my workouts →"),
+            ("🥗", "Eat", "#2EAD6B", "🥗 Food & diet", f"About {target['kcal']:,} kcal and {target['protein']} g protein today",
+             "Open my meal plan →"),
+            ("😴", "Rest", "#7B3FBF", None, "Phone away by 10:30 pm, aim for 7–8 hours of sleep", ""),
+        ]
+        items = plan["items"] if plan else []
+        done_count = 0
+        for i, (icon, tag, colour, target_page, fallback, go_text) in enumerate(cards_spec):
+            item = items[i] if i < len(items) else None
+            done = bool(item and item.get("done"))
+            done_count += done
+            text = item["text"] if item else fallback
+            with st.container(key=f"pc_{'done' if done else 'todo'}_{i}"):
+                c1, c2 = st.columns([6, 1], vertical_alignment="center")
+                c1.markdown(f'<div class="pc {"done" if done else ""}"><div class="ic" style="background:{colour}22">{icon}</div>'
+                            f'<div><div class="tag" style="color:{colour}">{"✓ " + tag + " done" if done else tag}</div>'
+                            f'<div class="tx">{ui.html.escape(text)}</div>'
+                            + (f'<div class="go">{go_text}</div>' if target_page else "") + "</div></div>",
+                            unsafe_allow_html=True)
+                if target_page:
+                    c1.button(f"Open {tag}", key=f"go_{i}", on_click=go_to, args=(target_page,))
+                if item is not None:
                     if c2.button("↩️" if done else "✅", key=f"pcb_{i}", help="Undo" if done else "Mark as done"):
                         storage.set_plan_item(today_str, i, not done)
                         if not done:
                             st.toast("Nice! One step closer 🌱")
                         st.rerun()
-            st.markdown(ui.growbar(done_count / len(plan["items"]) * 100), unsafe_allow_html=True)
-            if done_count == len(plan["items"]):
-                st.markdown(ui.card("🎉 All done!", "Tulsi is so proud of you. Rest well tonight 💜"), unsafe_allow_html=True)
-            else:
-                st.caption(f"{done_count} of {len(plan['items'])} done. Small steps count. 🌱")
+        if items:
+            st.markdown(ui.growbar(done_count / len(items) * 100), unsafe_allow_html=True)
+            st.caption("🎉 All done! Tulsi is so proud of you." if done_count == len(items)
+                       else f"{done_count} of {len(items)} done. Small steps count. 🌱")
         else:
-            st.markdown(ui.card("🌱 No plan for today yet",
-                                "Tulsi can make one now, or you'll get tomorrow's after tonight's check-in."), unsafe_allow_html=True)
-            if st.button("✨ Make today's plan", type="primary", key="make_plan"):
-                with st.spinner("Tulsi is planning your day..."):
-                    try:
-                        storage.save_plan(today_str, today_str, coach.plan_for_today(profile, storage.recent_checkins(7)))
-                        st.rerun()
-                    except coach.CoachError as err:
-                        show_error(err)
+            st.caption("These are Tulsi's suggestions. Tap ✨ Create today's plan for 3 steps made for your day.")
         if next_plan:
             rows = "".join(f'<div style="display:flex;gap:.6rem;align-items:center;margin:.35rem 0">'
-                           f'<span style="font-size:1.3rem">{plan_icons[i % 3][0]}</span><span>{ui.html.escape(it["text"])}</span></div>'
+                           f'<span style="font-size:1.3rem">{cards_spec[i % 3][0]}</span><span>{ui.html.escape(it["text"])}</span></div>'
                            for i, it in enumerate(next_plan["items"]))
             st.markdown(f'<div class="soft-panel" style="margin-top:1rem"><div style="font-weight:800;color:#4E2A84;font-size:1.1rem">'
-                        f'🌙 Tomorrow\'s plan is ready</div>{rows}</div>', unsafe_allow_html=True)
-        ft = journey.follow_through(7)
-        if ft["total"]:
-            st.caption(f"This week: {ft['done']} of {ft['total']} plan steps done ({ft['rate']:.0%}). "
-                       "Tulsi makes plans easier or harder to match what works for you.")
-
-    # ----- Row 2: Tulsi, cycle and water -----
-    left, right = st.columns([1, 2])
-    glasses = storage.water_today(today_str)
-    with left:
-        st.markdown(garden.tulsi_img(_growth["stage"], "10rem", fresh=glasses >= 8,
-                                     watering=st.session_state.pop("watered", False)), unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align:center'><b>{_growth['emoji']} {_growth['name']}</b></div>",
-                    unsafe_allow_html=True)
-    with right:
-        cyc = journey.cycle_info()
-        if cyc:
-            note = " Your cycle looks irregular, so this is a rough guess." if cyc["irregular"] else ""
-            st.markdown(ui.card(f"{cyc['emoji']} Cycle day {cyc['day']} · {cyc['phase']} phase",
-                                cyc["tip"] + note), unsafe_allow_html=True)
-        else:
-            st.markdown(ui.card("🌙 Cycle-aware tips", "Tick <b>My period started today</b> in your check-in "
-                                "(or add dates in 🩺 Health profile) and Tulsi will tailor advice to your cycle."),
-                        unsafe_allow_html=True)
-        fresh_note = " Tulsi's leaves are sparkling! ✨" if glasses >= 8 else " Each glass you drink waters Tulsi too."
-        st.markdown(ui.card(f"💧 Water today: {glasses} / 8 glasses",
-                            f"<span class='water'>{'💧' * min(glasses, 8)}{'🤍' * max(0, 8 - glasses)}</span><br>{fresh_note}"),
-                    unsafe_allow_html=True)
-        w1, w2, _ = st.columns([2, 1, 3])
-        w1.button("💧 I drank a glass: water Tulsi", key="water_add", on_click=water_tulsi, args=(today_str,))
-        if w2.button("➖", key="water_remove", help="Remove a glass"):
-            storage.set_water(today_str, glasses - 1)
-            st.rerun()
-
-        q1, q2 = st.columns(2)
-        q1.button("🆘 Having a craving?", key="to_crave", on_click=go_to, args=("🆘 Craving SOS",))
-        q2.button("🌡️ Log PCOS symptoms", key="to_sym", on_click=go_to, args=("🌡️ Symptoms",))
-
+                        f'🌙 Tomorrow\'s plan</div>{rows}</div>', unsafe_allow_html=True)
 
     if not profile:
         st.info("Tip: fill in your **🩺 Health profile** first so your coach can personalise advice.")
@@ -353,13 +349,13 @@ elif page == "🏠 Today":
                         "Weight (kg, optional)", 0.0, 300.0, float(prefill("weight_kg", "weight_kg", 0.0)), 0.1,
                         help="Optional. Once a week is plenty. Daily weight goes up and down with water, periods and salt.",
                     )
-                    period_started = st.checkbox("🩸 My period started today", value=day in storage.load_periods())
+                    period_started = st.checkbox("🩸 I have my period today", value=day in storage.load_flow())
 
             submitted = st.form_submit_button("Save & get my coach's feedback ✨", type="primary")
 
         if submitted:
-            if period_started:
-                storage.add_period(day)
+            if period_started and day not in storage.load_flow():
+                cycle.log_flow(day, "medium")
             entry = {
                 "sleep_hours": sleep_hours, "steps": steps, "distance_km": distance_km,
                 "calories": calories, "exercise": exercise, "exercise_minutes": exercise_minutes,
@@ -968,7 +964,12 @@ elif page == "🥗 Food & diet":
                         show_error(err)
         with right:
             if photo:
-                st.image(photo)
+                import base64
+                img64 = base64.b64encode(photo.getvalue()).decode()
+                st.markdown(f'<div style="text-align:center"><img src="data:{photo.type or "image/jpeg"};base64,{img64}" '
+                            'style="max-width:16rem;max-height:16rem;width:100%;object-fit:cover;border-radius:24px;'
+                            'box-shadow:0 8px 22px rgba(78,42,132,.12)"><div style="color:#786E8C;font-size:.85rem;'
+                            'margin-top:.4rem">Your meal</div></div>', unsafe_allow_html=True)
             else:
                 st.markdown(ui.card("🍛 Your meal photo will appear here",
                                     "Tip: take the photo from above in good light, with the whole plate visible."),
@@ -1168,6 +1169,95 @@ elif page == "📊 Progress":
 
 # ---------------- Page: My garden (Tulsi grows, badges, wins) ----------------
 
+elif page == "🩸 My cycle":
+    st.markdown("""<style>
+    .st-key-flow_pick [role="radiogroup"] > label { padding:.7rem 1.2rem !important; }
+    .st-key-flow_pick label p { font-size:1.1rem !important; font-weight:700 !important; }
+    .phase-card { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:22px; padding:1.1rem 1.2rem; height:100%; }
+    .phase-card h4 { margin:0 0 .2rem !important; font-size:1.15rem !important; }
+    .phase-card .when { font-size:.85rem; font-weight:700; opacity:.8; margin-bottom:.5rem; }
+    .phase-card p { margin:.35rem 0 !important; font-size:.95rem !important; color:#2A2140; }
+    .phase-card.now { box-shadow:0 0 0 3px #7B3FBF; }
+    </style>""", unsafe_allow_html=True)
+    info = cycle.summary()
+    offset = st.session_state.setdefault("cal_offset", 0)
+    first = date.today().replace(day=1)
+    month = first.month - 1 + offset
+    year, month = first.year + month // 12, month % 12 + 1
+
+    cal_col, side_col = st.columns([3, 2], gap="large")
+    with cal_col:
+        n1, n2, n3 = st.columns([1, 3, 1])
+        if n1.button("◀ Previous", key="cal_prev", use_container_width=True):
+            st.session_state.cal_offset -= 1
+            st.rerun()
+        if offset and n2.button("📅 This month", key="cal_now", use_container_width=True):
+            st.session_state.cal_offset = 0
+            st.rerun()
+        if n3.button("Next ▶", key="cal_next", use_container_width=True):
+            st.session_state.cal_offset += 1
+            st.rerun()
+        st.markdown(cycle.calendar_html(year, month), unsafe_allow_html=True)
+
+    with side_col:
+        if info:
+            bg, fg, _ = cycle.PHASE_STYLE.get(info["phase"], ("#F1EAFB", "#4E2A84", ""))
+            when = ("today" if info["days_to_next"] == 0 else "tomorrow" if info["days_to_next"] == 1
+                    else f"in {info['days_to_next']} days" if info["days_to_next"] > 0 else "now")
+            st.markdown(f'<div style="background:{bg};border-radius:26px;padding:1.4rem 1.5rem;color:{fg}">'
+                        f'<div style="font-size:.85rem;font-weight:800;letter-spacing:.07em">TODAY · CYCLE DAY {info["cycle_day"]}</div>'
+                        f'<div style="font-size:2rem;font-weight:800;margin:.2rem 0">{info["emoji"]} {info["phase"]} phase</div>'
+                        f'<div style="color:#2A2140">{ui.html.escape(info["tip"])}</div></div>', unsafe_allow_html=True)
+            st.markdown(ui.tiles([
+                ("🩸 NEXT PERIOD", info["next"].strftime("%d %b"), when),
+                ("🔁 AVERAGE CYCLE", f"{info['length']} days", "looks irregular" if info["irregular"] else "from your dates"),
+            ]), unsafe_allow_html=True)
+            pattern = " → ".join(cycle.FLOWS[f][1] for f in info["pattern"])
+            st.caption(f"Your usual flow: {pattern}. Predictions get better with every period you log. "
+                       "With PCOS, cycles vary, so treat dates as a rough guide.")
+        else:
+            st.markdown(ui.card("🌙 Start tracking your cycle",
+                                "Log the days of your period below. Tulsi will learn your cycle length and usual flow, "
+                                "predict your next period and phases, and tailor food and exercise tips to them."),
+                        unsafe_allow_html=True)
+
+        with st.container(border=True, key="ck_flow"):
+            ui.card_header("🩸", "Log a period day", "Log each day of your period and how heavy it was", tint="#FADDE3")
+            p_day = st.date_input("Day", value=date.today(), max_value=date.today(), key="flow_day")
+            flow_keys = list(cycle.FLOWS)
+            current = storage.load_flow().get(p_day.isoformat())
+            with st.container(key="flow_pick"):
+                flow = st.radio("Flow", flow_keys, horizontal=True, label_visibility="collapsed",
+                                index=flow_keys.index(current) if current else 1,
+                                format_func=lambda k: f"{cycle.FLOWS[k][0]} {cycle.FLOWS[k][1]}")
+            f1, f2 = st.columns(2)
+            if f1.button("💾 Save this day" if not current else "💾 Update this day", type="primary", key="flow_save",
+                         use_container_width=True):
+                cycle.log_flow(p_day.isoformat(), flow)
+                st.toast(f"{cycle.FLOWS[flow][1]} flow saved for {p_day.strftime('%d %b')} 🌸")
+                st.rerun()
+            if current and f2.button("🗑️ Remove this day", key="flow_remove", use_container_width=True):
+                cycle.remove_flow(p_day.isoformat())
+                st.rerun()
+
+    ui.section("Your four phases", "What usually happens, and what helps. The highlighted one is where you are now.")
+    cols = st.columns(4)
+    for col, (phase, (when, body, food, move)) in zip(cols, cycle.PHASE_GUIDE.items()):
+        bg, fg, _ = cycle.PHASE_STYLE[phase]
+        now = " now" if info and info["phase"] == phase else ""
+        col.markdown(f'<div class="phase-card{now}" style="background:{bg}"><h4 style="color:{fg} !important">'
+                     f'{journey.PHASES[phase][0]} {phase}</h4><div class="when" style="color:{fg}">{when}</div>'
+                     f'<p>{body}</p><p>🍽️ {food}</p><p>🏃‍♀️ {move}</p></div>', unsafe_allow_html=True)
+
+    flows = storage.load_flow()
+    if flows:
+        with st.expander(f"📋 All logged period days ({len(flows)})"):
+            for d in sorted(flows, reverse=True)[:60]:
+                e, label, _ = cycle.FLOWS[flows[d]]
+                st.markdown(f"{e} **{date.fromisoformat(d).strftime('%a %d %b %Y')}** · {label}"
+                            + (" · *period start*" if d in storage.load_periods() else ""))
+
+
 elif page == "🌸 My garden":
     g = _growth
     left, right = st.columns([1, 1])
@@ -1175,8 +1265,16 @@ elif page == "🌸 My garden":
         g_glasses = storage.water_today(date.today().isoformat())
         st.markdown(garden.tulsi_img(g["stage"], "16rem", fresh=g_glasses >= 8,
                                      watering=st.session_state.pop("watered", False)), unsafe_allow_html=True)
-        st.button(f"💧 Water Tulsi ({g_glasses}/8 glasses today)", key="garden_water",
+        fresh_note = " Tulsi's leaves are sparkling! ✨" if g_glasses >= 8 else " Each glass you drink waters Tulsi too."
+        st.markdown(ui.card(f"💧 Water today: {g_glasses} / 8 glasses",
+                            f"<span class='water'>{'💧' * min(g_glasses, 8)}{'🤍' * max(0, 8 - g_glasses)}</span><br>{fresh_note}"),
+                    unsafe_allow_html=True)
+        w1, w2 = st.columns([4, 1])
+        w1.button("💧 I drank a glass: water Tulsi", key="garden_water", type="primary", use_container_width=True,
                   on_click=water_tulsi, args=(date.today().isoformat(),))
+        if w2.button("➖", key="garden_water_remove", help="Remove a glass", use_container_width=True):
+            storage.set_water(date.today().isoformat(), g_glasses - 1)
+            st.rerun()
     with right:
         st.markdown(f"### {g['emoji']} {g['name']}")
         st.write(g["message"])
@@ -1400,29 +1498,6 @@ else:
     st.download_button("🩺 Download a health summary for my doctor (PDF)", cards.doctor_report(profile),
                        file_name=f"health_summary_{date.today().isoformat()}.pdf", mime="application/pdf",
                        key="doc_report_profile")
-
-    # ----- Cycle tracking -----
-    st.divider()
-    st.subheader("🌙 My cycle")
-    st.caption("Add the dates your recent periods started. Tulsi uses them to tailor food and exercise "
-               "tips to your cycle phase. With PCOS, cycles can be irregular, so more dates mean better guesses.")
-    c1, c2 = st.columns([3, 1])
-    p_day = c1.date_input("Period start date", value=date.today(), max_value=date.today(), key="pday")
-    c2.write("")
-    if c2.button("Add date"):
-        storage.add_period(p_day.isoformat())
-        st.rerun()
-    cyc = journey.cycle_info()
-    if cyc:
-        st.markdown(ui.card(f"{cyc['emoji']} Today: cycle day {cyc['day']} · {cyc['phase']} phase",
-                            f"Average cycle: {cyc['length']} days · next period around {cyc['next_period']}"
-                            f"{' · looks irregular' if cyc['irregular'] else ''}"), unsafe_allow_html=True)
-    for d in reversed(storage.load_periods()):
-        c1, c2 = st.columns([4, 1])
-        c1.write(f"🩸 {d}")
-        if c2.button("Remove", key=f"p{d}"):
-            storage.delete_period(d)
-            st.rerun()
 
     # ----- Medical report upload -----
     st.divider()

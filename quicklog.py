@@ -62,8 +62,9 @@ def save(day: str, parsed: dict) -> dict:
     if parsed.get("symptoms"):
         old = storage.load_symptoms().get(day, {})
         storage.save_symptoms(day, {**old, **parsed["symptoms"]})
-    if parsed.get("period_started"):
-        storage.add_period(day)
+    if parsed.get("period_started") and day not in storage.load_flow():
+        import cycle
+        cycle.log_flow(day, "medium")
 
     entry.setdefault("stress", 2)
     entry.setdefault("energy", 3)

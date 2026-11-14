@@ -383,16 +383,17 @@ def theme_words(theme: str) -> list[dict]:
         raise CoachError("Tulsi couldn't make words for that theme. Try a different one.")
 
 
-def plan_for_today(profile: dict, checkins: dict) -> list[str]:
-    """Three tiny steps for today, when there's no plan yet (e.g. the first morning)."""
+def plan_for_today(profile: dict, checkins: dict, when: str = "today") -> list[str]:
+    """Three tiny steps for today or tomorrow: movement, food, rest (in that order)."""
     from datetime import date
     loop = plan_context(date.today().isoformat())
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "system", "content": build_context(profile, checkins) + ("\n\nPLAN FOLLOW-UP\n" + loop if loop else "")},
         {"role": "user", "content": (
-            "Make me a tiny plan for TODAY: exactly 3 short, realistic actions (one for movement, one for food, one for "
-            "sleep or rest), adjusted to my recent sleep, stress, cycle phase and how well I follow plans. "
+            f"Make me a tiny plan for {when.upper()}: exactly 3 short, specific, realistic actions IN THIS ORDER: 1) movement "
+            "(name real moves with sets/reps or minutes, e.g. 3 × 12 squats, 15-min warm-up), 2) food (a specific meal or swap "
+            "with a portion), 3) sleep or rest, adjusted to my recent sleep, stress, cycle phase and how well I follow plans. "
             "Reply with ONLY one line in this format: PLAN: action one | action two | action three")},
     ]
     _, items = extract_plan(call_ai(messages, max_tokens=200, temperature=0.6))

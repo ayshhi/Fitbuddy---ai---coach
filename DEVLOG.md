@@ -252,6 +252,18 @@ squats, and I ate a **proper planned diet**. So I made both specific:
   "Maggi at 11 pm"). A library of ~20 specific foods gives 3 swaps for exactly that food, each with why it works, plus a kind
   tip for enjoying the real thing. Foods not in the library get swaps from the AI.
 
+## Step 17 (14 Nov): A real cycle tracker, and a calmer Today page
+
+- **🩸 My cycle page:** log each period day with its flow (heavy, medium, light, spotting). A new period starts
+  automatically when there was no flow in the two days before. A month calendar colours every day by phase (period,
+  follicular, ovulation, luteal), shows flow drops on period days, and shows **predicted** periods and phases with dashed
+  borders. Predictions use my average cycle length and my usual flow pattern (the most common flow on day 1, 2, 3...).
+  Four phase cards explain what happens and what helps with food and exercise; the current phase is highlighted.
+- **Today:** check in as many times as I like (morning, lunch, night); each check-in adds to the day and shows in a
+  timeline. The plan is three cards: Exercise and Eat open their pages, Rest is a reminder, and ✅ marks each done.
+  Two buttons make a plan for today or for tomorrow (with specific moves and meals, in that order).
+- Water moved to My garden, the cycle card moved to My cycle, and period dates left the Health profile page.
+
 ---
 
 ## What I learned

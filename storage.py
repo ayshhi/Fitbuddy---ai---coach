@@ -382,3 +382,36 @@ def delete_exercise(day: str, index: int) -> None:
     if 0 <= index < len(data.get(day, [])):
         data[day].pop(index)
         _write(EXERCISE_FILE, data)
+
+
+# ---------------- Period flow by day ----------------
+# {"2026-11-02": "heavy", ...}  (heavy / medium / light / spotting)
+FLOW_FILE = DATA_DIR / "period_flow.json"
+
+
+def load_flow() -> dict:
+    return _read(FLOW_FILE, {})
+
+
+def set_flow(day: str, flow: str | None) -> None:
+    data = load_flow()
+    if flow:
+        data[day] = flow
+    else:
+        data.pop(day, None)
+    _write(FLOW_FILE, dict(sorted(data.items())))
+
+
+# ---------------- Check-ins through the day ----------------
+# {"2026-11-14": [{"time": "09:10", "words": "...", "chips": [...]}]}
+CHECKIN_LOG_FILE = DATA_DIR / "checkin_log.json"
+
+
+def load_checkin_log(day: str) -> list:
+    return _read(CHECKIN_LOG_FILE, {}).get(day, [])
+
+
+def add_checkin_log(day: str, item: dict) -> None:
+    data = _read(CHECKIN_LOG_FILE, {})
+    data.setdefault(day, []).append(item)
+    _write(CHECKIN_LOG_FILE, data)
