@@ -592,8 +592,9 @@ def section(title: str, subtitle: str = "") -> None:
 
 HOME_CSS = """
 <style>
-.home { position:relative; text-align:center; padding: 1rem 0 0; }
-.home .sky { position:relative; width:min(56rem, 94%); margin:0 auto; }
+.home { position:relative; text-align:center; padding: 1rem 0 0; min-height: calc(100vh - 9rem);
+        display:flex; flex-direction:column; justify-content:center; }
+.home .sky { position:relative; width:min(94%, calc((100vh - 21rem) * 1.8)); margin:0 auto; }
 .home .sky svg { width:100%; height:auto; display:block; overflow:visible; }
 .home .arc { fill:none; stroke-linecap:round; stroke-dasharray: 1000; stroke-dashoffset: 1000;
              animation: draw-arc 1.6s ease-out forwards; }
@@ -605,9 +606,9 @@ HOME_CSS = """
 .home .tulsi .t-happy { display:none; }
 .home h1 { font-size: 3rem !important; color: var(--ink) !important; margin: 1.2rem 0 .2rem !important;
            animation: rise .8s .9s both; }
-.home p.lead { font-size: 1.15rem !important; color: var(--muted) !important; animation: rise .8s 1.1s both; }
+.home p.lead { font-size: 1.3rem !important; color: var(--muted) !important; animation: rise .8s 1.1s both; }
 .home .chips { display:flex; justify-content:center; gap:.8rem; flex-wrap:wrap; margin: 1rem 0 .4rem; animation: rise .8s 1.3s both; }
-.home .chips span { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:99px; padding:.45rem 1rem; font-weight:600; color:#4E2A84; }
+.home .chips span { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:99px; padding:.55rem 1.2rem; font-weight:600; color:#4E2A84; font-size:1.05rem !important; }
 @keyframes draw-arc { to { stroke-dashoffset: 0; } }
 @keyframes drift { from { transform: translateX(-8px); } to { transform: translateX(8px); } }
 @keyframes rise { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
@@ -837,3 +838,18 @@ def inject_widget_css() -> None:
 def card_header(icon: str, title: str, subtitle: str = "", tint: str = "#F1EAFB") -> None:
     st.markdown(f'<div class="ck-head"><div class="ic" style="background:{tint}">{icon}</div>'
                 f'<div><b>{html.escape(title)}</b><span>{subtitle}</span></div></div>', unsafe_allow_html=True)
+
+
+def auto_size() -> None:
+    """Sets the base text size from the window width, so big or high-resolution screens never look tiny.
+    Done with a script because Streamlit's own font-size setting was overriding the CSS rule."""
+    import streamlit.components.v1 as components
+    components.html("""<script>
+    const w = window.parent;
+    function fit() {
+      const px = Math.max(18, Math.min(36, w.innerWidth * 0.0105 + 4));
+      w.document.documentElement.style.setProperty('font-size', px.toFixed(1) + 'px', 'important');
+    }
+    fit();
+    if (!w.__fbResize) { w.__fbResize = true; w.addEventListener('resize', fit); }
+    </script>""", height=0)

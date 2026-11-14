@@ -364,10 +364,17 @@ def daily_feedback(profile: dict, checkins: dict, today: str) -> str:
 def theme_words(theme: str) -> list[dict]:
     """Words and easy clues for a crossword on any theme the user types."""
     import json
-    prompt = (f'Make crossword words for the theme: "{theme}". Give 16 different single English words (no spaces or '
-              "hyphens), 3 to 10 letters each, that most people in India would know, with a short, easy, friendly clue "
-              "for each. The clue must not contain the word itself. Keep everything kind and family-friendly. "
-              'Reply with ONLY JSON: {"words": [{"word": "MANGO", "clue": "King of fruits in summer"}]}')
+    prompt = (f'Make a fun newspaper-style crossword on the theme: "{theme}".\n'
+              "Give 16 single words (letters only, no spaces or hyphens), 3 to 10 letters each.\n"
+              "WORDS: use words SPECIFIC to this theme (famous names, titles, places, dishes, songs, things only fans "
+              "would know), not plain dictionary words. For Bollywood, think SHOLAY, DEVDAS, KAJOL, RAHMAN, LAGAAN, "
+              "not ACTRESS or COMEDY. A person who loves this theme should know most of them.\n"
+              "CLUES: make them interesting, like a quiz or newspaper crossword: a real fact, a famous line, a "
+              "fill-in-the-blank, or playful wordplay. Never a bland dictionary definition. Example clues: "
+              "'Gabbar Singh's 1975 classic', 'Kerala's festival of the harvest and the pookalam', "
+              "'Mozart of Madras who won two Oscars'. Each clue under 12 words, and it must not contain the answer.\n"
+              "Keep it kind and family-friendly. Only use facts you are sure are correct.\n"
+              'Reply with ONLY JSON: {"words": [{"word": "SHOLAY", "clue": "Gabbar Singh\'s 1975 classic"}]}')
     raw = call_ai([{"role": "user", "content": prompt}], max_tokens=1200, temperature=0.7)
     start, end = raw.find("{"), raw.rfind("}")
     try:

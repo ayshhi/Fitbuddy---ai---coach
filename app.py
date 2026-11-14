@@ -32,6 +32,7 @@ ui.inject_card_css()
 ui.inject_page_css()
 ui.inject_spacing_css()
 ui.inject_widget_css()
+ui.auto_size()
 
 
 def show_error(err: Exception) -> None:
@@ -588,6 +589,15 @@ elif page == "🎯 Wellness Bingo":
 
 
 elif page == "🧩 Crossword":
+    st.markdown("""<style>
+    .st-key-cw_mode label p, .st-key-cw_theme label p, .st-key-cw_custom_pick label p { font-size:1.15rem !important; font-weight:700 !important; }
+    .st-key-cw_mode [role="radiogroup"] > label, .st-key-cw_theme [role="radiogroup"] > label,
+    .st-key-cw_custom_pick [role="radiogroup"] > label { padding:.7rem 1.3rem !important; }
+    [class*="st-key-cwbox"] label p { font-size:1.12rem !important; font-weight:600 !important; line-height:1.4 !important; }
+    [class*="st-key-cwbox"] input { font-size:1.3rem !important; letter-spacing:.25em; text-transform:uppercase; height:3rem; }
+    .st-key-cw_own label p { font-size:1.15rem !important; font-weight:700 !important; }
+    .st-key-cw_own input { font-size:1.2rem !important; height:3.2rem; }
+    </style>""", unsafe_allow_html=True)
     mode = st.radio("Mode", ["📅 Today's crossword", "🗂️ Pick a theme", "✍️ My own theme"], horizontal=True,
                     label_visibility="collapsed", key="cw_mode")
     puzzle = None
@@ -602,7 +612,7 @@ elif page == "🧩 Crossword":
             rounds[theme] = rounds.get(theme, 0) + 1
             st.rerun()
     else:
-        with st.form("own_theme", border=False):
+        with st.container(key="cw_own"), st.form("own_theme", border=False):
             c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
             typed = c1.text_input("Type any theme", placeholder="e.g. Onam festival, monsoon foods, Bollywood dance, my favourite things")
             go = c2.form_submit_button("✨ Make my crossword", type="primary")
@@ -631,7 +641,7 @@ elif page == "🧩 Crossword":
     if puzzle:
         key, title, cw = puzzle
         state = crossword.state(key, cw)
-        size = "3.1rem" if state["cols"] <= 10 else "2.6rem"
+        size = "3.4rem" if state["cols"] <= 10 else "2.9rem"
         st.markdown(f"""<style>
         .cw-grid {{ display:flex; flex-direction:column; gap:.3rem; align-items:center; padding: .6rem 0 .8rem; }}
         .cw-row {{ display:flex; gap:.3rem; }}
@@ -662,7 +672,7 @@ elif page == "🧩 Crossword":
                 st.link_button("📲 Share on WhatsApp", games.whatsapp(share), type="primary")
                 st.caption("Want another? Pick a theme or type your own above. 🌿")
             else:
-                with st.form(f"cw_form_{key}", border=False):
+                with st.container(key=f"cwbox_{key}"), st.form(f"cw_form_{key}", border=False):
                     answers = {}
                     for direction in ("Across", "Down"):
                         st.markdown(f"**{direction}**")
@@ -700,34 +710,18 @@ elif page == "🔥 Exercise":
     total = exercise.day_total(today_str)
     progress = total["kcal"] / goal if goal else 0
 
-    sun_col, today_col = st.columns([2, 3])
+    sun_col, info_col = st.columns([1, 2], vertical_alignment="center")
     with sun_col:
-        st.markdown(f'<div style="max-width:17rem;margin:0 auto">{exercise.sun_svg(progress)}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="max-width:16rem;margin:0 auto">{exercise.sun_svg(progress)}</div>', unsafe_allow_html=True)
+    with info_col:
         msg = ("☀️ Goal reached! You're shining today!" if progress >= 1 else
                "🌤️ Your sun is waking up. Keep going!" if progress > 0 else "😴 Your sun is still sleepy. Any movement wakes it up!")
-        st.markdown(f'<div style="text-align:center"><div style="font-size:2.1rem;font-weight:800;color:#2A2140">~{total["kcal"]} kcal</div>'
-                    f'<div style="color:#786E8C">burned today · goal {goal} kcal · {total["minutes"]:.0f} min</div>'
-                    f'<div style="margin-top:.3rem;font-weight:700;color:#4E2A84">{msg}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:2.6rem;font-weight:800;color:#2A2140;line-height:1.1">~{total["kcal"]} kcal burned</div>'
+                    f'<div style="color:#786E8C;font-size:1.1rem">today · goal {goal} kcal · {total["minutes"]:.0f} min moved</div>'
+                    f'<div style="margin:.4rem 0;font-weight:700;color:#4E2A84;font-size:1.15rem">{msg}</div>', unsafe_allow_html=True)
         st.markdown(ui.growbar(progress * 100), unsafe_allow_html=True)
-    with today_col:
-        st.markdown("**Done today**")
-        entries = exercise.day_entries(today_str)
-        if not entries:
-            st.caption("Nothing yet. Pick a workout below, or log a single move. Even 5 minutes counts! 🌱")
-        manual_index = 0
-        for e in entries:
-            r1, r2 = st.columns([8, 1], vertical_alignment="center")
-            detail = e.get("detail") or f"{e['minutes']:.0f} min"
-            r1.markdown(f'<div class="meal"><div class="i">{e["emoji"]}</div><div class="m"><b>{ui.html.escape(e["name"])}</b>'
-                        f'<div>{ui.html.escape(detail)}{" · Samsung Health" if e["source"] == "samsung" else ""}</div></div>'
-                        f'<div class="kc">~{e["kcal"]} kcal</div></div>', unsafe_allow_html=True)
-            if e["source"] != "samsung":
-                if r2.button("✕", key=f"exdel_{manual_index}", help="Remove"):
-                    storage.delete_exercise(today_str, manual_index)
-                    st.rerun()
-                manual_index += 1
 
-    tab_workouts, tab_move, tab_week = st.tabs(["🏋️‍♀️ Workouts", "➕ Log a single move", "📅 This week"])
+    tab_workouts, tab_move, tab_week = st.tabs(["🏋️‍♀️ Workouts", "➕ Log a single move", "📅 My log"])
 
     with tab_workouts:
         pick_name, why = exercise.suggested_routine()
@@ -753,7 +747,7 @@ elif page == "🔥 Exercise":
             chosen = list(range(len(rows))) if log_all else [i for i, t in enumerate(ticks) if t]
             if chosen:
                 burned = exercise.log_routine_moves(today_str, routine, chosen, profile)
-                st.toast(f"Logged! ~{burned} kcal burned 🔥 Your sun is brighter!")
+                st.toast(f"Logged! ~{burned} kcal burned 🔥 Your sun is brighter! (See 📅 My log)")
                 st.rerun()
             else:
                 st.warning("Tick the moves you did first, or tap 'I did the whole workout'.")
@@ -792,6 +786,23 @@ elif page == "🔥 Exercise":
                    "These are estimates: real burn varies with effort and fitness.")
 
     with tab_week:
+        st.markdown("**Today**")
+        entries = exercise.day_entries(today_str)
+        if not entries:
+            st.caption("Nothing yet today. Pick a workout, or log a single move. Even 5 minutes counts! 🌱")
+        manual_index = 0
+        for e in entries:
+            r1, r2 = st.columns([12, 1], vertical_alignment="center")
+            detail = e.get("detail") or f"{e['minutes']:.0f} min"
+            r1.markdown(f'<div class="meal"><div class="i">{e["emoji"]}</div><div class="m"><b>{ui.html.escape(e["name"])}</b>'
+                        f'<div>{ui.html.escape(detail)}{" · Samsung Health" if e["source"] == "samsung" else ""}</div></div>'
+                        f'<div class="kc">~{e["kcal"]} kcal</div></div>', unsafe_allow_html=True)
+            if e["source"] != "samsung":
+                if r2.button("✕", key=f"exdel_{manual_index}", help="Remove"):
+                    storage.delete_exercise(today_str, manual_index)
+                    st.rerun()
+                manual_index += 1
+        st.markdown("**This week**")
         week = exercise.week_totals()
         top = max(k for _, _, k in week) or 1
         bars = "".join(
