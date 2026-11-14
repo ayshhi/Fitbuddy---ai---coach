@@ -1256,6 +1256,7 @@ elif page == "📊 Progress":
                 st.caption(f"ℹ️ {msg}")
         if storage.load_samsung() and st.button("🗑️ Remove imported Samsung data"):
             storage.clear_samsung()
+            journey.resync_garden()
             st.success("Imported Samsung data removed. Your check-ins and weight history are kept.")
             st.rerun()
 
@@ -1275,6 +1276,7 @@ elif page == "📊 Progress":
             c1.write(f"{d}: **{kg} kg**")
             if c2.button("Remove", key=f"w{d}"):
                 storage.delete_weight(d)
+                journey.resync_garden()  # Tulsi follows your data when you delete some
                 st.rerun()
 
 # ---------------- Page: My garden (Tulsi grows, badges, wins) ----------------
@@ -1650,9 +1652,29 @@ else:
             st.markdown(profile["report_summary"])
 
     # ----- Delete data -----
-    if profile:
-        st.divider()
-        if st.button("🗑️ Delete my health profile"):
+    st.divider()
+    st.subheader("🗑️ Delete my data")
+    st.caption("Everything lives only on this computer, in the data folder. You can delete it at any time.")
+    d1, d2 = st.columns(2, gap="large")
+    with d1.container(border=True):
+        st.markdown("**Delete my health profile**")
+        st.caption("Removes your profile and your goal. Tulsi's growth comes from your goal, so she starts again "
+                   "(only your effort counts until you set a new goal) and her flowers are cleared. "
+                   "Your check-ins, meals and other logs stay.")
+        if st.button("🗑️ Delete my health profile", disabled=not profile, key="del_profile"):
             storage.delete_profile()
-            st.success("Your profile has been deleted.")
+            storage.reset_garden()
+            st.toast("Your profile has been deleted, and Tulsi has started again. 🌱")
+            st.rerun()
+    with d2.container(border=True):
+        st.markdown("**Start completely fresh**")
+        st.caption("Deletes everything: profile, check-ins, meals, weights, workouts, cycle, symptoms, chat and "
+                   "Tulsi's garden. This can't be undone.")
+        sure = st.checkbox("Yes, I understand this deletes everything", key="del_all_sure")
+        if st.button("🗑️ Delete all my data", disabled=not sure, key="del_all"):
+            removed = storage.delete_all_data()
+            for k in list(st.session_state.keys()):
+                if k != "nav":
+                    del st.session_state[k]
+            st.toast(f"All your data has been deleted ({removed} files). A fresh start! 🌱")
             st.rerun()

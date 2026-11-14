@@ -439,3 +439,22 @@ def save_best_for(goal: float) -> None:
     g = _garden()
     g["best_for"] = goal
     _write(GARDEN_FILE, g)
+
+
+def reset_garden(keep_flowers: list | None = None) -> None:
+    """Forget Tulsi's saved growth (and flowers, unless some are kept). Badges seen are kept."""
+    g = _garden()
+    for key in ("best", "best_for", "flowers"):
+        g.pop(key, None)
+    if keep_flowers:
+        g["flowers"] = keep_flowers
+    _write(GARDEN_FILE, g)
+
+
+def delete_all_data() -> int:
+    """Deletes every file in the data folder: a completely fresh start. Returns how many files were removed."""
+    count = 0
+    for f in DATA_DIR.glob("*.json"):
+        f.unlink()
+        count += 1
+    return count

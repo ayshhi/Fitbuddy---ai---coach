@@ -563,3 +563,13 @@ def specific_swaps(food: str):
             if not best or length > best[0]:
                 best = (length, group, swaps, tip)
     return best[1:] if best else None
+
+
+def resync_garden() -> None:
+    """After data is deleted, Tulsi follows what's left: her growth is worked out again from the remaining data,
+    and a flower is kept only if a logged weight still reaches that goal. (On normal bad days she never shrinks;
+    this is only for deleted data.)"""
+    logged = [kg for _, kg in weights(all_days())]
+    lowest = min(logged) if logged else None
+    keep = [f for f in storage.load_flowers() if lowest is not None and lowest <= float(f["goal"]) + 0.05]
+    storage.reset_garden(keep_flowers=keep)

@@ -289,6 +289,11 @@ the profile didn't add it to the weight log, and the garden reads the log. Now s
 reaching a goal mean more: each goal reached adds a permanent flower, and a new goal starts a new journey from the
 weight where the last one ended. Tulsi stays at least a leafy plant once she has bloomed, so she never "goes back".
 
+**Deleting data resets the garden.** "Tulsi never shrinks" is right for bad days, but not when data is deleted. Now:
+deleting the health profile resets her growth and flowers (no goal, no flowers); removing a weight entry or Samsung data
+recalculates her from what's left, keeping only flowers that a logged weight still reaches; and a new "Start completely
+fresh" button deletes every data file, behind a confirmation tick.
+
 ---
 
 ## What I learned
