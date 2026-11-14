@@ -305,6 +305,10 @@ her voice on for typed replies too. Clicking Tulsi now plays a little giggle mad
 I also found a subtle browser rule: a click handler attached from Streamlit's hidden helper frame stops working once that
 frame is replaced on the next rerun, so the click code is now added to the main page itself.
 
+**Craving log, and Tulsi up top.** Craving SOS now has a log of every craving (time, food, strength, trigger and how
+it went), newest first, with a ✕ to remove one. Tulsi moved to the top-right corner, and her giggle is now a higher
+"hee-hee-hee", shaped by two filters that make an "ee" sound.
+
 ---
 
 ## What I learned

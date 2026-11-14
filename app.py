@@ -512,6 +512,31 @@ elif page == "🆘 Craving SOS":
     elif pat:
         st.caption(f"You've logged {pat['total']} craving(s). After 3, Tulsi starts showing your patterns here.")
 
+    # ----- My craving log: check past cravings and remove any -----
+    all_cravings = storage.load_cravings()
+    if all_cravings:
+        ui.section(f"🗒️ My craving log ({len(all_cravings)})", "Every craving you've logged, newest first. Tap ✕ to remove one.")
+        outcome_labels = {k: v for k, v in journey.OUTCOMES.items()}
+        shown_log = list(enumerate(all_cravings))[::-1]
+        limit = 15 if not st.session_state.get("crave_all") else len(shown_log)
+        for i, c in shown_log[:limit]:
+            when = datetime.fromisoformat(c["when"]).strftime("%d %b, %I:%M %p")
+            what = c.get("food") or c["kind"].split(" ", 1)[1]
+            dots = "●" * int(c.get("strength") or 0) + "○" * (5 - int(c.get("strength") or 0))
+            outcome = outcome_labels.get(c.get("outcome"), "⏳ Not followed up yet")
+            r1, r2 = st.columns([14, 1], vertical_alignment="center")
+            r1.markdown(f'<div class="meal" style="margin:0"><div class="i">{c["kind"].split(" ", 1)[0]}</div><div class="m">'
+                        f'<b>{ui.html.escape(what)}</b><div>{when} · strength <span style="color:#C2334D;letter-spacing:.1em">'
+                        f'{dots}</span> · {ui.html.escape(c.get("trigger") or "")}</div></div>'
+                        f'<div class="kc" style="font-weight:600">{outcome}</div></div>', unsafe_allow_html=True)
+            if r2.button("✕", key=f"crave_del_{i}", help="Remove this craving"):
+                storage.delete_craving(i)
+                st.rerun()
+        if len(shown_log) > 15:
+            if st.button("Show fewer" if st.session_state.get("crave_all") else f"Show all {len(shown_log)}", key="crave_more"):
+                st.session_state.crave_all = not st.session_state.get("crave_all")
+                st.rerun()
+
 
 elif page == "🌡️ Symptoms":
     day = st.date_input("Date", value=date.today(), max_value=date.today(), key="sym_day").isoformat()

@@ -458,3 +458,10 @@ def delete_all_data() -> int:
         f.unlink()
         count += 1
     return count
+
+
+def delete_craving(index: int) -> None:
+    data = load_cravings()
+    if 0 <= index < len(data):
+        data.pop(index)
+        _write(CRAVINGS_FILE, data)

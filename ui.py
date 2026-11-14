@@ -507,7 +507,7 @@ MASCOT_SVG = """<svg viewBox="0 0 120 130" xmlns="http://www.w3.org/2000/svg">
 </svg>"""
 
 MASCOT_CSS = """
-#tulsi-mascot { position: fixed; right: 1.6rem; bottom: 1.4rem; z-index: 9999; width: 7.5rem;
+#tulsi-mascot { position: fixed; right: 1.2rem; top: 2.8rem; bottom: auto; z-index: 9999; width: 5.5rem;
                 cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
 #tulsi-mascot svg { width: 100%; height: auto; display: block; overflow: visible; }
 #tulsi-mascot .t-body { transform-origin: 60px 118px; animation: t-jump 2.2s ease-in-out infinite; }
@@ -517,10 +517,10 @@ MASCOT_CSS = """
 #tulsi-mascot.happy .t-normal { display: none; }
 #tulsi-mascot.happy .t-happy { display: inline; }
 #tulsi-mascot.happy .t-body { animation: t-joy .6s ease-in-out 2; }
-#tulsi-mascot .t-bubble { position: absolute; right: 85%; bottom: 78%; white-space: nowrap; background: #FFFFFF;
-  color: #2A2140; font: 600 1rem/1.3 "Source Sans Pro", sans-serif; padding: .55rem .9rem; border-radius: 1rem 1rem .25rem 1rem;
+#tulsi-mascot .t-bubble { position: absolute; right: 100%; top: 38%; bottom: auto; white-space: nowrap; background: #FFFFFF;
+  color: #2A2140; font: 600 1rem/1.3 "Source Sans Pro", sans-serif; padding: .5rem .85rem; border-radius: 1rem .25rem 1rem 1rem;
   box-shadow: 0 6px 20px rgba(78,42,132,.18); border: 1px solid #E6DDF3; animation: t-pop .5s cubic-bezier(.2,.9,.3,1.3) both; }
-#tulsi-mascot .t-heart { position: absolute; font-size: 1.3rem; bottom: 70%; opacity: 0; pointer-events: none; }
+#tulsi-mascot .t-heart { position: absolute; font-size: 1.1rem; top: 30%; opacity: 0; pointer-events: none; }
 #tulsi-mascot.happy .t-heart { animation: t-float 1.4s ease-out forwards; }
 #tulsi-mascot .t-heart:nth-of-type(1) { left: 10%; animation-delay: 0s; }
 #tulsi-mascot .t-heart:nth-of-type(2) { left: 45%; animation-delay: .15s; }
@@ -538,7 +538,51 @@ MASCOT_CSS = """
 """
 
 
-CLICK_JS = "(function () {\n  const m = document.getElementById('tulsi-mascot');\n  m.addEventListener('click', function () {\n\n          const m = this; const b = m.querySelector('.t-bubble');\n          const cheers = JSON.parse(m.dataset.cheers || '[]');\n          m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');\n          // a little giggle, made by the browser itself (no sound file or internet needed)\n          try {\n            const AC = window.AudioContext || window.webkitAudioContext;\n            const ctx = window.__tulsiGiggle || (window.__tulsiGiggle = new AC());\n            if (ctx.state === 'suspended') ctx.resume();\n            const t0 = ctx.currentTime + 0.02;\n            [0, 0.12, 0.23, 0.33, 0.42].forEach((dt, i) => {\n              const o = ctx.createOscillator(), g = ctx.createGain();\n              const wob = ctx.createOscillator(), wg = ctx.createGain();\n              const f = 760 + i * 45 + Math.random() * 40;\n              o.type = 'triangle';\n              o.frequency.setValueAtTime(f * 1.3, t0 + dt);\n              o.frequency.exponentialRampToValueAtTime(f * 0.85, t0 + dt + 0.09);\n              wob.frequency.value = 30; wg.gain.value = 45; wob.connect(wg); wg.connect(o.frequency);\n              g.gain.setValueAtTime(0.0001, t0 + dt);\n              g.gain.exponentialRampToValueAtTime(0.22, t0 + dt + 0.015);\n              g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.1);\n              o.connect(g); g.connect(ctx.destination);\n              o.start(t0 + dt); wob.start(t0 + dt); o.stop(t0 + dt + 0.11); wob.stop(t0 + dt + 0.11);\n            });\n          } catch (e) {}\n          b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';\n          b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';\n          clearTimeout(m._t);\n          m._t = setTimeout(() => { m.classList.remove('happy'); b.textContent = m.dataset.hello; }, 3000);\n  });\n})();\n"
+CLICK_JS = """
+(function () {
+  const m = document.getElementById('tulsi-mascot');
+  // a girly "hee-hee-hee" giggle, made by the browser itself (Web Audio API; no sound file or internet needed)
+  function giggle() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = window.__tulsiGiggle || (window.__tulsiGiggle = new AC());
+      if (ctx.state === 'suspended') ctx.resume();
+      const out = ctx.createGain(); out.gain.value = 0.9; out.connect(ctx.destination);
+      // an "ee" vowel: two formant filters shape a bright, breathy tone
+      const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 2800; f1.Q.value = 5;
+      const f2 = ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 1300; f2.Q.value = 4;
+      f1.connect(out); f2.connect(out);
+      const t0 = ctx.currentTime + 0.02;
+      const notes = [0, 0.11, 0.21, 0.30, 0.38, 0.47, 0.58];       // hee-hee-hee-hee, speeding up then a last one
+      notes.forEach((dt, i) => {
+        const len = i === notes.length - 1 ? 0.16 : 0.085;
+        const top = 1180 - i * 45 + Math.random() * 30;          // high and bouncy, slowly coming down
+        const o = ctx.createOscillator(); o.type = 'sawtooth';
+        o.frequency.setValueAtTime(top * 1.12, t0 + dt);
+        o.frequency.exponentialRampToValueAtTime(top * 0.86, t0 + dt + len);
+        const vib = ctx.createOscillator(), vg = ctx.createGain();
+        vib.frequency.value = 22; vg.gain.value = top * 0.03; vib.connect(vg); vg.connect(o.frequency);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t0 + dt);
+        g.gain.exponentialRampToValueAtTime(0.5, t0 + dt + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + len);
+        o.connect(g); g.connect(f1); g.connect(f2);
+        o.start(t0 + dt); vib.start(t0 + dt); o.stop(t0 + dt + len + 0.02); vib.stop(t0 + dt + len + 0.02);
+      });
+    } catch (e) {}
+  }
+  m.addEventListener('click', function () {
+    const b = m.querySelector('.t-bubble');
+    const cheers = JSON.parse(m.dataset.cheers || '[]');
+    m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');
+    giggle();
+    b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';
+    b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+    clearTimeout(m._t);
+    m._t = setTimeout(() => { m.classList.remove('happy'); b.textContent = m.dataset.hello; }, 3000);
+  });
+})();
+"""
 
 
 def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
@@ -573,7 +617,7 @@ def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
         m.dataset.cheers = {json.dumps(json.dumps(cheers))};
         if (!m.classList.contains('happy')) m.querySelector('.t-bubble').textContent = m.dataset.hello;
         m.style.display = {json.dumps("block" if show else "none")};
-        m.style.bottom = {json.dumps("7.5rem" if lift else "1.4rem")};
+        m.style.bottom = '';  // she now sits in the top-right corner on every page
         </script>""",
         height=0,
     )
