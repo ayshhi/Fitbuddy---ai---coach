@@ -42,14 +42,19 @@ CSS = """
 /* Text and layout grow with the screen, so big / high-resolution monitors aren't tiny */
 html { font-size: 18px !important; }
 /* the whole app is scaled to the window width by ui.auto_size() */
-[data-testid="stMain"], section.main, section[data-testid="stSidebar"], div[role="dialog"], [data-testid="stPopoverBody"] { zoom: var(--fbz, 1); }
+/* zoom the CONTENT inside the scroll area (not the scroll area itself), so scrolling keeps working */
+.block-container, [data-testid="stMainBlockContainer"], [data-testid="stSidebarContent"],
+div[role="dialog"], [data-testid="stPopoverBody"] { zoom: var(--fbz, 1); }
+/* no page headers any more, so start content right at the top */
+header[data-testid="stHeader"] { background: transparent !important; height: 2.6rem !important; }
+.block-container, [data-testid="stMainBlockContainer"] { padding-top: 1.2rem !important; padding-bottom: 3rem !important; }
 /* on computer screens, keep columns side by side instead of letting them wrap onto new lines */
 @media (min-width: 900px) {
   [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; }
   [data-testid="stColumn"], [data-testid="column"] { min-width: 0 !important; }
 }
 .stApp { overflow-x: hidden; }
-.block-container { padding-top: 2.2rem; padding-left: 3rem; padding-right: 3rem;
+.block-container { padding-left: 3rem; padding-right: 3rem;
                    max-width: 100% !important; margin: 0 auto; }
 section[data-testid="stSidebar"] { min-width: 17rem !important; }
 section[data-testid="stSidebar"] label p { font-size: 1.05rem !important; }

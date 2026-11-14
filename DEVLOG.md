@@ -245,6 +245,12 @@ squats, and I ate a **proper planned diet**. So I made both specific:
 - Crossword: my own-theme clues were bland dictionary definitions ("Woman who performs in movies"). The prompt now asks
   for theme-specific answers (names, titles, dishes) and quiz-style clues (facts, famous lines, fill-in-the-blanks).
   The theme picker, clues and answer boxes are bigger.
+- Scaling the scroll area broke scrolling, so now only the content inside it is scaled. The empty space where page
+  headers used to be is gone; content starts at the top.
+- **Today:** check-in on the left, today's plan on the right as cards (Move / Eat / Rest) with a Done button and a progress bar.
+- **Craving SOS:** instead of picking "sweet" or "salty", you type exactly what you want ("Dairy Milk", "chicken biryani",
+  "Maggi at 11 pm"). A library of ~20 specific foods gives 3 swaps for exactly that food, each with why it works, plus a kind
+  tip for enjoying the real thing. Foods not in the library get swaps from the AI.
 
 ---
 

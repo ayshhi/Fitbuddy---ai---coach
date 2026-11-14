@@ -115,12 +115,6 @@ if page == "🌈 Home":
 
 elif page == "🏠 Today":
     name = profile.get("name") or "there"
-    st.markdown(ui.chat_window(
-        [{"role": "assistant", "content": f"Hey {name}! 🌿 How was your day? Tell me below and "
-          "I'll help you plan a lovely tomorrow 💜", "time": ui.now_time()}],
-        ), unsafe_allow_html=True)
-    st.write("")
-
     today_str = date.today().isoformat()
     glasses = storage.water_today(today_str)
 
@@ -147,25 +141,115 @@ elif page == "🏠 Today":
             box.empty()
             show_error(err)
 
-    # ----- Row 1: today's plan  |  just tell Tulsi -----
-    plan_col, tell_col = st.columns([2, 3])
-    with plan_col.container(border=True, key="ck_plan"):
+    plan_icons = [("🏃‍♀️", "Move", "#FF9F1C"), ("🥗", "Eat", "#2EAD6B"), ("😴", "Rest", "#7B3FBF")]
+    st.markdown("""<style>
+    [class*="st-key-pc_"] { background:#FFFFFF; border-radius:22px !important; border:1px solid #E6DDF3 !important;
+        padding:.9rem 1.1rem !important; box-shadow:0 6px 18px rgba(78,42,132,.06); transition: transform .15s; }
+    [class*="st-key-pc_"]:hover { transform: translateY(-2px); }
+    [class*="st-key-pc_done"] { background:linear-gradient(135deg,#EEF8F2,#F7FCF9) !important; border-color:#BFE6CF !important; }
+    .pc { display:flex; align-items:center; gap:1rem; }
+    .pc .ic { width:3.4rem; height:3.4rem; border-radius:16px; display:flex; align-items:center; justify-content:center;
+              font-size:1.8rem; flex-shrink:0; }
+    .pc .tag { font-size:.8rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .pc .tx { font-weight:600; color:#2A2140; font-size:1.05rem; line-height:1.35; }
+    .pc.done .tx { text-decoration: line-through; color:#5E8C72; }
+    </style>""", unsafe_allow_html=True)
+
+    checkin_col, plan_col = st.columns([1, 1], gap="large")
+
+    # ----- Left: check in -----
+    with checkin_col:
+        with st.container(border=True, key="ck_tell"):
+            ui.card_header("💬", f"Hey {name}! How was your day?", "Tell Tulsi in your own words, and she'll fill in your check-in",
+                           tint="#FCE8F3")
+            with st.form("quick_log", border=False):
+                said = st.text_area("Your day", label_visibility="collapsed", height=120,
+                                    placeholder="e.g. Slept about 6 hours. Walked 30 min after work. Dosa and chai for breakfast, "
+                                                "rice with sambar for lunch. 5 glasses of water. A bit stressed and tired, bloated.")
+                go = st.form_submit_button("✨ Fill in my check-in", type="primary")
+            audio = st.audio_input("🎙️ Or say it out loud") if hasattr(st, "audio_input") else None
+            spoken = None
+            if audio is not None and st.session_state.get("last_day_audio") != hash(audio.getvalue()):
+                st.session_state.last_day_audio = hash(audio.getvalue())
+                with st.spinner("Listening..."):
+                    try:
+                        spoken = coach.transcribe(audio.getvalue(), audio.type or "audio/wav")
+                    except coach.CoachError as err:
+                        show_error(err)
+            words = spoken or (said.strip() if go else "")
+            if words:
+                with st.spinner("Tulsi is reading about your day..."):
+                    try:
+                        st.session_state.quick = {"day": today_str, "parsed": coach.parse_day(words), "words": words}
+                    except coach.CoachError as err:
+                        show_error(err)
+
+        # ----- Confirm what Tulsi understood -----
+        quick = st.session_state.get("quick")
+        if quick:
+            with st.container(border=True, key="ck_confirm"):
+                ui.card_header("✅", "Here's what I understood", f"“{ui.html.escape(quick['words'][:160])}”", tint="#E7F4EC")
+                chips = quicklog.understood(quick["parsed"])
+                if chips:
+                    st.markdown('<div class="chips" style="gap:.5rem">' + "".join(
+                        f'<span class="chip" style="font-size:.95rem !important;padding:.35rem .8rem">{ui.html.escape(c)}</span>'
+                        for c in chips) + "</div>", unsafe_allow_html=True)
+                    st.caption("Anything you didn't mention stays as it was (Samsung data, earlier entries).")
+                    b1, b2, _ = st.columns([2, 2, 3])
+                    if b1.button("✅ Looks right, save it", type="primary", key="quick_save"):
+                        entry = quicklog.save(quick["day"], quick["parsed"])
+                        del st.session_state.quick
+                        st.success("Saved to your check-in! 🎉")
+                        run_feedback(quick["day"], quicklog.summary(quick["day"], entry),
+                                     float(entry.get("sleep_hours") or 0), int(entry.get("stress") or 2))
+                    if b2.button("✏️ Not quite, discard", key="quick_discard"):
+                        del st.session_state.quick
+                        st.rerun()
+                else:
+                    st.info("I couldn't find anything to log in that. Try mentioning sleep, food, exercise, water or how you feel.")
+                    if st.button("OK", key="quick_ok"):
+                        del st.session_state.quick
+                        st.rerun()
+
+        if st.session_state.get("feedback"):
+            pop = 1 if st.session_state.pop("feedback_new", False) else None
+            st.markdown(ui.chat_window(st.session_state.feedback, pop_from=pop), unsafe_allow_html=True)
+            if st.session_state.pop("plan_saved", False) or pop:
+                st.caption("📋 Tulsi's 3 steps are saved as tomorrow's checklist.")
+            st.caption("💬 Want to talk more? Continue in **Chat with Tulsi**.")
+
+
+    # ----- Right: plans as cards -----
+    with plan_col:
         plan = storage.load_plans().get(today_str)
         tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
         next_plan = storage.load_plans().get(tomorrow_str)
         ui.card_header("📋", "Today's plan from Tulsi",
-                       "Tick them off as you go" if plan else "3 tiny steps: movement, food and rest", tint="#EDE2FB")
+                       "Tap Done as you go" if plan else "3 tiny steps: movement, food and rest", tint="#EDE2FB")
         if plan:
+            done_count = 0
             for i, item in enumerate(plan["items"]):
-                st.checkbox(item["text"], value=item.get("done", False), key=f"plan_{today_str}_{i}",
-                            on_change=lambda d=today_str, i=i: storage.set_plan_item(d, i, st.session_state[f"plan_{d}_{i}"]))
-            done = sum(1 for i in plan["items"] if i.get("done"))
-            if done == len(plan["items"]):
+                icon, tag, colour = plan_icons[i % 3]
+                done = bool(item.get("done"))
+                done_count += done
+                with st.container(key=f"pc_{'done' if done else 'todo'}_{i}"):
+                    c1, c2 = st.columns([5, 1], vertical_alignment="center")
+                    c1.markdown(f'<div class="pc {"done" if done else ""}"><div class="ic" style="background:{colour}22">{icon}</div>'
+                                f'<div><div class="tag" style="color:{colour}">{"✓ Done" if done else tag}</div>'
+                                f'<div class="tx">{ui.html.escape(item["text"])}</div></div></div>', unsafe_allow_html=True)
+                    if c2.button("↩️" if done else "✅", key=f"pcb_{i}", help="Undo" if done else "Mark as done"):
+                        storage.set_plan_item(today_str, i, not done)
+                        if not done:
+                            st.toast("Nice! One step closer 🌱")
+                        st.rerun()
+            st.markdown(ui.growbar(done_count / len(plan["items"]) * 100), unsafe_allow_html=True)
+            if done_count == len(plan["items"]):
                 st.markdown(ui.card("🎉 All done!", "Tulsi is so proud of you. Rest well tonight 💜"), unsafe_allow_html=True)
             else:
-                st.caption(f"{done} of {len(plan['items'])} done. Small steps count. 🌱")
+                st.caption(f"{done_count} of {len(plan['items'])} done. Small steps count. 🌱")
         else:
-            st.caption("No plan for today yet. Tulsi can make one now, or you'll get tomorrow's after tonight's check-in.")
+            st.markdown(ui.card("🌱 No plan for today yet",
+                                "Tulsi can make one now, or you'll get tomorrow's after tonight's check-in."), unsafe_allow_html=True)
             if st.button("✨ Make today's plan", type="primary", key="make_plan"):
                 with st.spinner("Tulsi is planning your day..."):
                     try:
@@ -174,73 +258,15 @@ elif page == "🏠 Today":
                     except coach.CoachError as err:
                         show_error(err)
         if next_plan:
-            st.markdown(ui.card("🌙 Tomorrow's plan is ready",
-                                "<br>".join(f"• {ui.html.escape(i['text'])}" for i in next_plan["items"])
-                                + "<br><span style='font-size:.85rem'>You can tick these off tomorrow.</span>"),
-                        unsafe_allow_html=True)
+            rows = "".join(f'<div style="display:flex;gap:.6rem;align-items:center;margin:.35rem 0">'
+                           f'<span style="font-size:1.3rem">{plan_icons[i % 3][0]}</span><span>{ui.html.escape(it["text"])}</span></div>'
+                           for i, it in enumerate(next_plan["items"]))
+            st.markdown(f'<div class="soft-panel" style="margin-top:1rem"><div style="font-weight:800;color:#4E2A84;font-size:1.1rem">'
+                        f'🌙 Tomorrow\'s plan is ready</div>{rows}</div>', unsafe_allow_html=True)
         ft = journey.follow_through(7)
         if ft["total"]:
             st.caption(f"This week: {ft['done']} of {ft['total']} plan steps done ({ft['rate']:.0%}). "
                        "Tulsi makes plans easier or harder to match what works for you.")
-
-    with tell_col.container(border=True, key="ck_tell"):
-        ui.card_header("💬", "Just tell Tulsi", "Describe your day in your own words, and she'll fill in your check-in",
-                       tint="#FCE8F3")
-        with st.form("quick_log", border=False):
-            said = st.text_area("Your day", label_visibility="collapsed", height=120,
-                                placeholder="e.g. Slept about 6 hours. Walked 30 min after work. Dosa and chai for breakfast, "
-                                            "rice with sambar for lunch. 5 glasses of water. A bit stressed and tired, bloated.")
-            go = st.form_submit_button("✨ Fill in my check-in", type="primary")
-        audio = st.audio_input("🎙️ Or say it out loud") if hasattr(st, "audio_input") else None
-        spoken = None
-        if audio is not None and st.session_state.get("last_day_audio") != hash(audio.getvalue()):
-            st.session_state.last_day_audio = hash(audio.getvalue())
-            with st.spinner("Listening..."):
-                try:
-                    spoken = coach.transcribe(audio.getvalue(), audio.type or "audio/wav")
-                except coach.CoachError as err:
-                    show_error(err)
-        words = spoken or (said.strip() if go else "")
-        if words:
-            with st.spinner("Tulsi is reading about your day..."):
-                try:
-                    st.session_state.quick = {"day": today_str, "parsed": coach.parse_day(words), "words": words}
-                except coach.CoachError as err:
-                    show_error(err)
-
-    # ----- Confirm what Tulsi understood -----
-    quick = st.session_state.get("quick")
-    if quick:
-        with st.container(border=True, key="ck_confirm"):
-            ui.card_header("✅", "Here's what I understood", f"“{ui.html.escape(quick['words'][:160])}”", tint="#E7F4EC")
-            chips = quicklog.understood(quick["parsed"])
-            if chips:
-                st.markdown('<div class="chips" style="gap:.5rem">' + "".join(
-                    f'<span class="chip" style="font-size:.95rem !important;padding:.35rem .8rem">{ui.html.escape(c)}</span>'
-                    for c in chips) + "</div>", unsafe_allow_html=True)
-                st.caption("Anything you didn't mention stays as it was (Samsung data, earlier entries).")
-                b1, b2, _ = st.columns([2, 2, 3])
-                if b1.button("✅ Looks right, save it", type="primary", key="quick_save"):
-                    entry = quicklog.save(quick["day"], quick["parsed"])
-                    del st.session_state.quick
-                    st.success("Saved to your check-in! 🎉")
-                    run_feedback(quick["day"], quicklog.summary(quick["day"], entry),
-                                 float(entry.get("sleep_hours") or 0), int(entry.get("stress") or 2))
-                if b2.button("✏️ Not quite, discard", key="quick_discard"):
-                    del st.session_state.quick
-                    st.rerun()
-            else:
-                st.info("I couldn't find anything to log in that. Try mentioning sleep, food, exercise, water or how you feel.")
-                if st.button("OK", key="quick_ok"):
-                    del st.session_state.quick
-                    st.rerun()
-
-    if st.session_state.get("feedback"):
-        pop = 1 if st.session_state.pop("feedback_new", False) else None
-        st.markdown(ui.chat_window(st.session_state.feedback, pop_from=pop), unsafe_allow_html=True)
-        if st.session_state.pop("plan_saved", False) or pop:
-            st.caption("📋 Tulsi's 3 steps are saved as tomorrow's checklist.")
-        st.caption("💬 Want to talk more? Continue in **Chat with Tulsi**.")
 
     # ----- Row 2: Tulsi, cycle and water -----
     left, right = st.columns([1, 2])
@@ -379,34 +405,75 @@ elif page == "🏠 Today":
 # ---------------- Page: Food scan ----------------
 
 elif page == "🆘 Craving SOS":
-    left, right = st.columns([3, 2])
+    st.markdown("""<style>
+    .swaps { display:grid; grid-template-columns: repeat(3, 1fr); gap:1.1rem; margin:.6rem 0 1rem; }
+    .swap { background:#FFFFFF; border:1px solid #E6DDF3; border-radius:24px; padding:1.4rem 1.3rem;
+            box-shadow:0 8px 22px rgba(78,42,132,.07); animation: rise .5s both; }
+    .swap:nth-child(2) { animation-delay:.1s; } .swap:nth-child(3) { animation-delay:.2s; }
+    .swap .e { width:4rem; height:4rem; border-radius:20px; background:linear-gradient(135deg,#F1EAFB,#FCE8F3);
+               display:flex; align-items:center; justify-content:center; font-size:2.2rem; margin-bottom:.8rem; }
+    .swap .t { font-weight:800; color:#2A2140; font-size:1.08rem; line-height:1.35; }
+    .swap .w { color:#786E8C; margin-top:.4rem; font-size:.95rem; }
+    .swap .k { display:inline-block; margin-top:.7rem; font-size:.78rem; font-weight:800; color:#2EAD6B;
+               background:#E7F4EC; border-radius:99px; padding:.2rem .7rem; }
+    .still { background:linear-gradient(135deg,#FFF6E8,#FDEFF5); border-radius:24px; padding:1.2rem 1.4rem;
+             border:1px solid #F6DFC4; }
+    .still b { color:#B5651D; }
+    @keyframes rise { from { opacity:0; transform: translateY(14px); } to { opacity:1; transform:none; } }
+    .st-key-ck_crave input { font-size:1.3rem !important; height:3.4rem; }
+    </style>""", unsafe_allow_html=True)
+    left, right = st.columns([3, 2], gap="large")
     with left:
-        with st.form("craving"):
-            kind = st.radio("What are you craving?", list(journey.SWAPS), horizontal=True)
-            strength = st.slider("How strong is it? (1 = a little, 5 = very strong)", 1, 5, 3)
-            trigger = st.radio("What might be behind it?", journey.TRIGGERS, horizontal=True, index=len(journey.TRIGGERS) - 1)
-            note = st.text_input("Anything else? (optional)", placeholder="e.g. long day at work, it's 10 pm")
-            if st.form_submit_button("Log it and help me 💜", type="primary"):
-                storage.add_craving({"when": datetime.now().strftime("%Y-%m-%dT%H:%M"), "kind": kind,
-                                     "strength": strength, "trigger": trigger, "note": note, "outcome": None})
-                st.session_state.last_craving = (kind, f"{trigger}, strength {strength}/5. {note}".strip())
+        with st.container(border=True, key="ck_crave"):
+            ui.card_header("🍫", "What are you craving right now?",
+                           "Type exactly what you want, and Tulsi finds a swap for that", tint="#FCE8F3")
+            with st.form("craving", border=False):
+                food = st.text_input("Craving", label_visibility="collapsed",
+                                     placeholder="e.g. Dairy Milk, chicken biryani, Maggi at 11 pm, banana chips")
+                strength = st.slider("How strong is it? (1 = a little, 5 = very strong)", 1, 5, 3)
+                trigger = st.radio("What might be behind it?", journey.TRIGGERS, horizontal=True, index=len(journey.TRIGGERS) - 1)
+                go = st.form_submit_button("Find me a swap 💜", type="primary")
+            if go and food.strip():
+                found = journey.specific_swaps(food)
+                if not found:
+                    with st.spinner(f"Tulsi is thinking of swaps for {food.strip()}..."):
+                        try:
+                            found = coach.craving_swaps(food.strip())
+                        except coach.CoachError:
+                            found = ("🍽️ Something else", [(e, t, "") for e, t in
+                                     [("🚶‍♀️", "A 5-minute walk, then see if you still want it"),
+                                      ("🍵", "A cup of ginger or tulsi tea"), ("🥜", "A small handful of nuts or a fruit")]],
+                                     "If you still want it after 15 minutes, have a small portion, sitting down, slowly.")
+                group, swaps, tip = found
+                storage.add_craving({"when": datetime.now().strftime("%Y-%m-%dT%H:%M"), "kind": group, "food": food.strip(),
+                                     "strength": strength, "trigger": trigger, "note": "", "outcome": None})
+                st.session_state.last_craving = {"food": food.strip(), "swaps": swaps, "tip": tip,
+                                                 "details": f"{trigger}, strength {strength}/5"}
+            elif go:
+                st.warning("Type what you're craving first. Be as specific as you like!")
     with right:
         st.markdown(ui.BREATHE_HTML, unsafe_allow_html=True)
 
-    if st.session_state.get("last_craving"):
-        kind, details = st.session_state.last_craving
-        ui.section("Try one of these instead", "Quick swaps that need no shopping trip. Pick whatever feels doable.")
-        swap_cards = "".join(f'<div class="food"><div class="n">{ui.html.escape(x)}</div></div>' for x in journey.SWAPS[kind])
-        st.markdown(f'<div class="foods">{swap_cards}</div>', unsafe_allow_html=True)
+    last = st.session_state.get("last_craving")
+    if isinstance(last, dict):
+        ui.section(f"Swaps for your {last['food']} craving", "Each one hits the same spot. Pick whatever feels doable.")
+        cards = "".join(f'<div class="swap"><div class="e">{e}</div><div class="t">{ui.html.escape(t)}</div>'
+                        + (f'<div class="w">{ui.html.escape(w)}</div>' if w else "") + '<span class="k">PCOS-FRIENDLY</span></div>'
+                        for e, t, w in last["swaps"])
+        st.markdown(f'<div class="swaps">{cards}</div>', unsafe_allow_html=True)
+        if last["tip"]:
+            st.markdown(f'<div class="still"><b>💜 If you still want the real thing:</b> {ui.html.escape(last["tip"])} '
+                        "It's completely okay. One food never undoes your progress.</div>", unsafe_allow_html=True)
+        st.write("")
         st.button("💬 Talk it through with Tulsi", type="primary", on_click=go_to_chat,
-                  args=(f"🆘 Craving SOS: {kind}",), kwargs={"craving": (kind, details)})
+                  args=(f"🆘 Craving SOS: {last['food']}",), kwargs={"craving": (last["food"], last["details"])})
 
     cravings = storage.load_cravings()
     open_ones = [i for i, c in enumerate(cravings) if not c.get("outcome")]
     if open_ones:
         i = open_ones[-1]
         c = cravings[i]
-        ui.section("How did it go?", f"Your {c['kind'].split(' ', 1)[1].lower()} craving from "
+        ui.section("How did it go?", f"Your {c.get('food') or c['kind'].split(' ', 1)[1].lower()} craving from "
                    f"{datetime.fromisoformat(c['when']).strftime('%d %b, %I:%M %p')}. Every answer is a good answer.")
         cols = st.columns(3)
         for col, (key, label) in zip(cols, journey.OUTCOMES.items()):

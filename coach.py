@@ -684,3 +684,23 @@ def summarise_report(report_text: str) -> str:
         {"role": "user", "content": report_text[:12000]},
     ]
     return call_ai(messages, max_tokens=500)
+
+
+def craving_swaps(food: str) -> tuple[str, list, str]:
+    """Specific swaps for a craving that isn't in FitBuddy's library. Returns (group, [(emoji, swap, why)], tip)."""
+    import json
+    prompt = (f'I\'m craving: "{food}". I have PCOS and I\'m in Kerala, India. Give 3 SPECIFIC healthier swaps for '
+              "exactly this food (with portions, easy to make at home or buy nearby), each with a short reason why it "
+              "satisfies the same craving. Also give one kind tip for enjoying the real thing mindfully if I still want it. "
+              "Never shame. Reply with ONLY JSON: "
+              '{"group": "sweet|salty|carbs|drink|other", "swaps": [{"emoji": "🍌", "swap": "...", "why": "..."}], "tip": "..."}')
+    raw = call_ai([{"role": "user", "content": prompt}], max_tokens=600, temperature=0.6)
+    start, end = raw.find("{"), raw.rfind("}")
+    try:
+        data = json.loads(raw[start:end + 1])
+        swaps = [(s.get("emoji", "🌿"), s["swap"], s.get("why", "")) for s in data["swaps"][:3]]
+    except (ValueError, KeyError, TypeError):
+        raise CoachError("Tulsi couldn't think of swaps just now.")
+    group = {"sweet": "🍫 Something sweet", "salty": "🍟 Fried or salty", "carbs": "🍚 Rice or carbs",
+             "drink": "🥤 A cold drink"}.get(str(data.get("group", "")).lower(), "🍽️ Something else")
+    return group, swaps, data.get("tip", "")
