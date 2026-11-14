@@ -299,6 +299,12 @@ reloads the page and closes the pop-up, so when something failed, nothing seemed
 voice panel under the message bar: record, and Tulsi answers out loud (gTTS), with a play button in case the browser
 blocks autoplay. Errors now say what went wrong (no microphone, free limit reached, key rejected).
 
+**Tulsi speaks every time, and giggles.** Her voice played once and then stopped, because browsers often block
+"autoplay" after the first time. Now the page itself starts each reply's audio, and a 🔊 button in the message bar turns
+her voice on for typed replies too. Clicking Tulsi now plays a little giggle made with the Web Audio API (no sound file).
+I also found a subtle browser rule: a click handler attached from Streamlit's hidden helper frame stops working once that
+frame is replaced on the next rerun, so the click code is now added to the main page itself.
+
 ---
 
 ## What I learned

@@ -538,6 +538,9 @@ MASCOT_CSS = """
 """
 
 
+CLICK_JS = "(function () {\n  const m = document.getElementById('tulsi-mascot');\n  m.addEventListener('click', function () {\n\n          const m = this; const b = m.querySelector('.t-bubble');\n          const cheers = JSON.parse(m.dataset.cheers || '[]');\n          m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');\n          // a little giggle, made by the browser itself (no sound file or internet needed)\n          try {\n            const AC = window.AudioContext || window.webkitAudioContext;\n            const ctx = window.__tulsiGiggle || (window.__tulsiGiggle = new AC());\n            if (ctx.state === 'suspended') ctx.resume();\n            const t0 = ctx.currentTime + 0.02;\n            [0, 0.12, 0.23, 0.33, 0.42].forEach((dt, i) => {\n              const o = ctx.createOscillator(), g = ctx.createGain();\n              const wob = ctx.createOscillator(), wg = ctx.createGain();\n              const f = 760 + i * 45 + Math.random() * 40;\n              o.type = 'triangle';\n              o.frequency.setValueAtTime(f * 1.3, t0 + dt);\n              o.frequency.exponentialRampToValueAtTime(f * 0.85, t0 + dt + 0.09);\n              wob.frequency.value = 30; wg.gain.value = 45; wob.connect(wg); wg.connect(o.frequency);\n              g.gain.setValueAtTime(0.0001, t0 + dt);\n              g.gain.exponentialRampToValueAtTime(0.22, t0 + dt + 0.015);\n              g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.1);\n              o.connect(g); g.connect(ctx.destination);\n              o.start(t0 + dt); wob.start(t0 + dt); o.stop(t0 + dt + 0.11); wob.stop(t0 + dt + 0.11);\n            });\n          } catch (e) {}\n          b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';\n          b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';\n          clearTimeout(m._t);\n          m._t = setTimeout(() => { m.classList.remove('happy'); b.textContent = m.dataset.hello; }, 3000);\n  });\n})();\n"
+
+
 def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
     """Puts Tulsi in the corner of the page. She bounces and waves; click her and she smiles.
     lift=True raises her a little (on the chat page, so she doesn't cover the message bar)."""
@@ -560,18 +563,12 @@ def mascot(name: str = "", show: bool = True, lift: bool = False) -> None:
                       + '<span class="t-heart">💜</span>' + {json.dumps(MASCOT_SVG)};
           d.body.appendChild(m);
         }}
-        // The click code is created in the MAIN page (w.Function), not in this helper frame. Streamlit replaces
-        // this frame on every rerun, and code that belonged to an old frame stops working.
-        const w = window.parent;
-        m.onclick = new w.Function(`
-          const m = this, b = m.querySelector('.t-bubble');
-          const cheers = JSON.parse(m.dataset.cheers || '[]');
-          m.classList.remove('happy'); void m.offsetWidth; m.classList.add('happy');
-          b.textContent = cheers[Math.floor(Math.random() * cheers.length)] || 'Hehe! 😄';
-          b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
-          clearTimeout(m._t);
-          m._t = setTimeout(() => {{ m.classList.remove('happy'); b.textContent = m.dataset.hello; }}, 3000);
-        `);
+        // The click code is added to the MAIN page as its own script, once. Code attached from this helper frame
+        // stops working when Streamlit replaces the frame, which happens on every rerun.
+        if (!d.getElementById('tulsi-click-js')) {{
+          const sc = d.createElement('script'); sc.id = 'tulsi-click-js'; sc.textContent = {json.dumps(CLICK_JS)};
+          d.body.appendChild(sc);
+        }}
         m.dataset.hello = {json.dumps(hello)};
         m.dataset.cheers = {json.dumps(json.dumps(cheers))};
         if (!m.classList.contains('happy')) m.querySelector('.t-bubble').textContent = m.dataset.hello;
@@ -878,4 +875,19 @@ def auto_size() -> None:
     }
     fit();
     if (!w.__fbResize) { w.__fbResize = true; w.addEventListener('resize', fit); }
+    </script>""", height=0)
+
+
+def play_voice(mp3: bytes) -> None:
+    """Plays Tulsi's spoken reply straight away. The audio is started by the main page itself (not autoplay,
+    which browsers often block after the first time), and any earlier reply that is still playing stops."""
+    import base64
+    import streamlit.components.v1 as components
+    data = base64.b64encode(mp3).decode()
+    components.html(f"""<script>
+    const w = window.parent;
+    if (w.__tulsiVoice) {{ w.__tulsiVoice.pause(); }}
+    const a = new w.Audio("data:audio/mpeg;base64,{data}");
+    w.__tulsiVoice = a;
+    a.play().catch(() => {{}});
     </script>""", height=0)

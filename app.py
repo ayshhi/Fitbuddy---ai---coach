@@ -1467,11 +1467,18 @@ elif page == "💬 Chat with Tulsi":
     offset = max(0, len(chat) - shown)
     flow = st.empty()
     flow.markdown(ui.chat_window(chat[offset:]), unsafe_allow_html=True)
+    reply_audio = st.empty()  # Tulsi's spoken reply (a replay button), just above the message bar
 
     # ----- The message bar: stays at the bottom of the screen -----
     with st.container(key="composer"):
-        c_plus, c_form, c_mic = st.columns([1, 12, 1], vertical_alignment="center", gap="small")
+        c_plus, c_form, c_speak, c_mic = st.columns([1, 11, 1, 1], vertical_alignment="center", gap="small")
         voice_open = st.session_state.get("voice_open", False)
+        speak_on = st.session_state.get("speak_on", False)
+        if c_speak.button("🔊" if speak_on else "🔇", key="speak_btn",
+                          help="Tulsi speaks her replies: ON (tap to turn off)" if speak_on else "Tap so Tulsi speaks her replies"):
+            st.session_state.speak_on = not speak_on
+            st.toast("🔊 Tulsi will speak her replies" if not speak_on else "🔇 Tulsi will reply quietly")
+            st.rerun()
 
         with c_plus.popover("✨", help="Plans & ideas"):
             st.markdown("**Plans for you**")
@@ -1495,7 +1502,7 @@ elif page == "💬 Chat with Tulsi":
             st.rerun()
 
         # Voice panel: shown right under the message bar (not in a pop-up), so errors are always visible
-        voice_prompt, speak, audio_slot = None, False, None
+        voice_prompt, speak, audio_slot = None, speak_on, None
         if voice_open:
             v1, v2 = st.columns([3, 2], vertical_alignment="center")
             if hasattr(st, "audio_input"):
@@ -1503,8 +1510,8 @@ elif page == "💬 Chat with Tulsi":
             else:
                 audio = None
                 v1.warning("Voice needs a newer Streamlit. In your terminal run `pip install -U streamlit`, then restart the app.")
-            speak = v2.toggle("🔊 Tulsi speaks her replies", value=True, key="speak")
-            audio_slot = v2.empty()
+            v2.caption("Tulsi always answers voice messages out loud. Tap 🔊 in the message bar to hear her "
+                       "typed replies too.")
             if audio is not None:
                 audio_bytes = audio.getvalue()
                 audio_id = hash(audio_bytes)
@@ -1551,9 +1558,11 @@ elif page == "💬 Chat with Tulsi":
     ui.scroll_to_bottom()
 
     if st.session_state.get("voice_reply"):
-        where = audio_slot.container() if audio_slot is not None else st
-        where.audio(st.session_state.pop("voice_reply"), format="audio/mp3", autoplay=True)
-        where.caption("▶️ If you don't hear her, press play. Some browsers block sound until you click.")
+        voice = st.session_state.pop("voice_reply")
+        ui.play_voice(voice)  # starts playing straight away
+        with reply_audio.container():
+            st.audio(voice, format="audio/mp3")  # to play it again
+            st.caption("🔊 Tulsi is speaking. Press play to hear her again.")
 
     if storage.load_chat():
         with st.expander("⚙️ Chat options"):
