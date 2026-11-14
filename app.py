@@ -12,9 +12,9 @@ from pypdf import PdfReader
 import pandas as pd
 
 import cards
-import challenge
 import coach
 import food
+import games
 import garden
 import journey
 import quicklog
@@ -39,7 +39,7 @@ def show_error(err: Exception) -> None:
 
 ui.sidebar_brand()
 PAGES = ["🌈 Home", "🏠 Today", "💬 Chat with Tulsi", "📸 Food scan", "🆘 Craving SOS", "🌡️ Symptoms",
-         "🌸 My garden", "🎲 Garden Path", "📊 Progress", "🩺 Health profile"]
+         "🌸 My garden", "🎯 Wellness Bingo", "🧠 Daily Puzzle", "📊 Progress", "🩺 Health profile"]
 page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
 
 
@@ -97,6 +97,9 @@ if page == "🌈 Home":
              "✅ Checked in today" if today_str in checked else "📝 Not checked in yet"]
     if streak >= 2:
         chips.append(f"🔥 {streak}-day best streak")
+    chips.append(f"🎯 Bingo: {len(games.ticked())}/25 this week")
+    if not games.puzzle_state()["over"]:
+        chips.append("🧠 Today's word is waiting")
     st.markdown(ui.home_html(profile.get("name", ""), chips), unsafe_allow_html=True)
     with st.container(key="letsgo"):
         st.button("Let's start ✨", on_click=go_to, args=("🏠 Today",))
@@ -495,128 +498,138 @@ elif page == "🌡️ Symptoms":
         st.caption("No symptoms logged yet. Start today, and in a couple of weeks Tulsi can show you what affects them.")
 
 
-elif page == "🎲 Garden Path":
-    ui.hero("🎲", "Tulsi's Garden Path", "A game with ladders and no snakes. Every healthy choice moves you forward 💜")
-    ch = storage.load_challenge()
-    prog = challenge.my_progress()
+elif page == "🎯 Wellness Bingo":
+    ui.hero("🎯", "Wellness Bingo", "Same card for you and your friends this week · a new card every Monday 💜")
+    week = games.week_key()
+    card = games.bingo_card()
+    done = games.ticked()
+    auto = games.auto_done()
+    lines = games.bingo_lines(done)
+    days_left = 6 - date.today().weekday()
 
-    if not prog:
-        ui.section("Pick your challenge", "You can start a new one anytime")
-        kind = st.radio("Challenge type", list(challenge.TYPES), format_func=lambda k: challenge.TYPES[k][0],
-                        horizontal=True, label_visibility="collapsed")
-        name, desc, rules, lengths = challenge.TYPES[kind]
-        with st.container(border=True):
-            st.markdown(f"**{name}**: {desc}")
-            st.markdown('<div class="chips" style="gap:.5rem">' + "".join(
-                f'<span class="chip" style="font-size:.95rem !important;padding:.35rem .8rem">{r}</span>' for r in rules)
-                + "</div>", unsafe_allow_html=True)
-            st.caption("🪜 Ladders jump you ahead for special moments: 🔥 a 3-day streak, 📋 finishing Tulsi's whole plan, "
-                       "📸 a food scan, 💜 a non-scale win. 🌿 No snakes: nothing ever sends you back.")
-        with st.form("new_challenge", border=False):
-            c1, c2 = st.columns(2)
-            my_name = c1.text_input("Your name on the board", profile.get("name", ""))
-            length = c2.radio("Board size", lengths, horizontal=True, index=min(1, len(lengths) - 1),
-                              format_func=lambda v: f"{v} squares (about {challenge.estimate_days(kind, v)} days)")
-            if st.form_submit_button("🎲 Start my challenge today", type="primary"):
-                storage.save_challenge({"start": date.today().isoformat(), "length": length, "type": kind,
-                                        "name": my_name or "Me", "friends": ch.get("friends", {})})
-                st.rerun()
-    else:
-        name, desc, rules, _ = challenge.TYPES[prog["type"]]
-        friends = list(ch.get("friends", {}).values())
-        players = [{"name": f["name"], "pos": f["pos"], "km": f["km"]} for f in friends]
-        players.append({"name": prog["name"], "pos": prog["pos"], "km": prog["points"], "me": True})
+    # celebrate a new bingo once
+    seen = st.session_state.get("bingo_seen", {}).get(week)
+    if seen is not None and lines > seen:
+        st.balloons()
+        st.toast("🎉 BINGO! Tulsi is doing a happy dance!" if lines == 1 else f"🎉 {lines} bingos! Amazing!")
+    st.session_state.setdefault("bingo_seen", {})[week] = lines
 
-        if prog["finished"]:
-            st.balloons()
-            st.success(f"🌸 You finished the Garden Path! Tulsi is so proud of you! Start a new one below whenever you like.")
-        st.markdown(ui.tiles([
-            ("📍 MY SQUARE", f"{prog['pos']} / {prog['length']}", f"{name}"),
-            ("✨ THIS WEEK", f"+{prog['this_week']}", "squares earned"),
-            ("🪜 LADDERS", f"{len(prog['climbed'])} climbed", " ".join(prog["climbed"]) or "unlock one below"),
-            ("👯 FRIENDS", f"{len(friends)}", "on your board"),
-        ]), unsafe_allow_html=True)
+    st.markdown(ui.tiles([
+        ("🟪 SQUARES", f"{len(done)} / 25", "done this week"),
+        ("🎯 BINGOS", str(lines), "rows, columns or diagonals"),
+        ("📅 DAYS LEFT", str(days_left) if days_left else "Last day!", "new card on Monday"),
+    ]), unsafe_allow_html=True)
+    st.caption("Tap a square when you've done it in real life. Squares with ✨ tick themselves from your data. "
+               "Get 5 in a row, column or diagonal for a bingo!")
 
-        board_col, side_col = st.columns([3, 2])
-        with board_col:
-            st.markdown(ui.chart_card("Your board", "Green ladders are unlocked · hover a token to see who it is",
-                                      challenge.board_svg(prog["length"], players, prog["pos"], prog["done"])),
-                        unsafe_allow_html=True)
-            legend = " &nbsp; ".join(
-                f"<span style='display:inline-block;width:.9rem;height:.9rem;border-radius:50%;background:"
-                f"{'#7B3FBF' if p.get('me') else challenge.TOKEN_COLORS[i % len(challenge.TOKEN_COLORS)]};"
-                f"vertical-align:middle'></span> {ui.html.escape(p['name'])} (square {p['pos']})"
-                for i, p in enumerate(players))
-            st.markdown(legend, unsafe_allow_html=True)
-        with side_col:
-            with st.container(border=True):
-                ui.card_header("🌱", "How you move", name, tint="#E7F4EC")
-                st.markdown('<div class="chips" style="gap:.45rem">' + "".join(
-                    f'<span class="chip" style="font-size:.9rem !important;padding:.3rem .7rem">{r}</span>' for r in rules)
-                    + "</div>", unsafe_allow_html=True)
-                locked = [l for l in challenge.ladders_for(prog["length"]) if l["habit"] not in prog["done"]]
-                if locked:
-                    st.caption("🔒 Ladders still to unlock: " + " · ".join(f"{l['emoji']} {l['desc']}" for l in locked))
-            with st.container(border=True):
-                ui.card_header("📜", "Your moves", "Why you moved forward", tint="#F1EAFB")
-                recent = list(reversed(prog["events"]))[:8]
-                if recent:
-                    st.markdown("".join(
-                        f'<div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px dashed #EEE6F8">'
-                        f'<span>{ui.html.escape(why)} <span style="color:#9A90AE;font-size:.85rem">· '
-                        f'{date.fromisoformat(d).strftime("%a %d %b")}</span></span><b style="color:#3FAE74">+{n}</b></div>'
-                        for d, n, why in recent), unsafe_allow_html=True)
+    # one CSS rule per square, so done squares turn purple
+    css = ['.stApp [class*="st-key-bingo_"] button { min-height: 7.4rem !important; width: 100%; white-space: normal !important; '
+           'border-radius: 20px !important; background: #FFFFFF !important; border: 1.5px solid #E6DDF3 !important; '
+           'padding: .7rem .6rem !important; box-shadow: 0 4px 14px rgba(78,42,132,.06) !important; }',
+           '.stApp [class*="st-key-bingo_"] button p { font-size: .95rem !important; line-height: 1.3 !important; font-weight: 600 !important; color: #2A2140 !important; }',
+           '.stApp [class*="st-key-bingo_"] button:hover { border-color: #C38BEA !important; transform: translateY(-2px); }']
+    for i in done:
+        css.append(f'.stApp .st-key-bingo_{i} button {{ background: linear-gradient(135deg, #7B3FBF, #A66BE0) !important; '
+                   f'border-color: transparent !important; box-shadow: 0 8px 20px rgba(123,63,191,.3) !important; }}'
+                   f'.stApp .st-key-bingo_{i} button p {{ color: #FFFFFF !important; }}')
+    st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
+
+    for r in range(5):
+        cols = st.columns(5)
+        for c in range(5):
+            i = r * 5 + c
+            tid, emoji, text, auto_key = card[i]
+            mark = "✅ " if i in done else ""
+            sparkle = " ✨" if auto_key and auto_key in auto else ""
+            if cols[c].button(f"{mark}{emoji} {text}{sparkle}", key=f"bingo_{i}"):
+                if tid == "free" or (auto_key and auto_key in auto):
+                    st.toast("This one is already ticked ✨" if tid != "free" else "Always free, always true 💜")
                 else:
-                    st.caption("Nothing yet. Check in, drink water or move a little, and watch your token go! 🌱")
+                    storage.toggle_bingo(week, i)
+                    st.rerun()
 
-        ui.section("Play with friends", "Race side by side. Only your name and square are shared, never your health data.")
-        f1, f2 = st.columns(2)
-        with f1:
-            my_code = challenge.make_code(prog["name"], prog)
-            st.markdown("**Your friend code**")
-            st.code(my_code, language=None)
-            st.link_button("📲 Send it on WhatsApp", challenge.whatsapp_link(prog["name"], my_code))
-            st.caption(f"Your friend should start a **{name}** challenge too, so you're playing the same game.")
-        with f2:
-            with st.form("add_friend", clear_on_submit=True):
-                code = st.text_input("Paste a friend's code", placeholder="TULSI-...")
-                if st.form_submit_button("➕ Add / update friend"):
-                    try:
-                        friend = challenge.read_code(code)
-                        challenge.save_friend(friend)
-                        if friend.get("type") != prog["type"]:
-                            st.session_state.type_note = (f"Added! Note: {friend['name']} is playing "
-                                                          f"{challenge.TYPES.get(friend['type'], ('another type',))[0]}, not {name}.")
-                        st.rerun()
-                    except ValueError as err:
-                        st.error(str(err))
-                    except Exception:
-                        st.error("That code doesn't look right. Ask your friend to copy it again.")
-            if st.session_state.get("type_note"):
-                st.info(st.session_state.pop("type_note"))
-            with st.expander("Friend doesn't have the app? Add them by hand"):
-                with st.form("manual_friend", clear_on_submit=True):
-                    m1, m2 = st.columns(2)
-                    fname = m1.text_input("Friend's name")
-                    fsq = m2.number_input("Their square", 0, 100, 0, 1)
-                    if st.form_submit_button("Save") and fname.strip():
-                        challenge.save_friend({"name": fname.strip()[:20], "pos": int(fsq), "km": float(fsq),
-                                               "type": prog["type"], "updated": date.today().isoformat(), "manual": True})
-                        st.rerun()
-        for f in friends:
-            r1, r2 = st.columns([6, 1])
-            age = challenge.days_old(f)
-            stale = f" · ⏳ {age} days old, ask for a fresh code" if age and age >= 3 else ""
-            r1.write(f"👤 **{f['name']}**: square {f['pos']}{' (added by hand)' if f.get('manual') else ''}{stale}")
-            if r2.button("Remove", key=f"rmf_{f['name']}"):
-                challenge.remove_friend(f["name"])
-                st.rerun()
+    ui.section("Share with friends", "Your friends see the same card this week. Send your progress and invite them!")
+    share = games.bingo_share(profile.get("name", ""), done)
+    s1, s2 = st.columns([3, 2])
+    s1.code(share, language=None)
+    with s2:
+        st.link_button("📲 Share on WhatsApp", games.whatsapp(share), type="primary")
+        st.caption("Tip: make a WhatsApp group with friends and share every Sunday. Nobody loses, everyone gets healthier. 🌿")
 
-        with st.expander("⚙️ Start a different challenge"):
-            st.caption("Your friends stay on your list. Your current progress will be replaced.")
-            if st.button("🔄 Choose a new challenge"):
-                storage.save_challenge({"friends": ch.get("friends", {})})
-                st.rerun()
+
+elif page == "🧠 Daily Puzzle":
+    ui.hero("🧠", "Tulsi's Daily Word", "One word a day · same word for everyone · about 3 minutes 🌿")
+    state = games.puzzle_state()
+    today_key = date.today().isoformat()
+
+    colors = {"g": "#3FAE74", "y": "#F7B267", "x": "#B9AECB"}
+    rows_html = []
+    for r in range(6):
+        if r < len(state["guesses"]):
+            g = state["guesses"][r]
+            marks = games.score_guess(g, state["answer"])
+            newest = r == len(state["guesses"]) - 1
+            cells = "".join(
+                f'<div class="pz-tile{" flip" if newest else ""}" style="background:{colors[m]};border-color:{colors[m]};'
+                f'color:#fff;animation-delay:{k * 0.12:.2f}s">{ch}</div>' for k, (ch, m) in enumerate(zip(g, marks)))
+        else:
+            cells = "".join('<div class="pz-tile"></div>' for _ in range(5))
+        rows_html.append(f'<div class="pz-row">{cells}</div>')
+    st.markdown("""<style>
+    .pz-board { display:flex; flex-direction:column; gap:.45rem; align-items:center; margin: .5rem 0 1rem; }
+    .pz-row { display:flex; gap:.45rem; }
+    .pz-tile { width:3.6rem; height:3.6rem; border:2px solid #E6DDF3; border-radius:14px; background:#FFFFFF;
+               display:flex; align-items:center; justify-content:center; font-size:1.7rem; font-weight:800; }
+    .pz-tile.flip { animation: pz-flip .5s ease both; }
+    @keyframes pz-flip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
+    .pz-keys { display:flex; flex-direction:column; align-items:center; gap:.3rem; margin-top:.4rem; }
+    .pz-keys div { display:flex; gap:.3rem; }
+    .pz-keys span { min-width:2.1rem; padding:.4rem 0; text-align:center; border-radius:8px; font-weight:700; font-size:.9rem; }
+    </style>""" + f'<div class="pz-board">{"".join(rows_html)}</div>', unsafe_allow_html=True)
+
+    # a small keyboard that shows which letters you've learned about
+    best = {}
+    rank = {"g": 3, "y": 2, "x": 1}
+    for g in state["guesses"]:
+        for ch, m in zip(g, games.score_guess(g, state["answer"])):
+            if rank[m] > rank.get(best.get(ch), 0):
+                best[ch] = m
+    key_rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]
+    keys = "".join("<div>" + "".join(
+        f'<span style="background:{colors[best[k]] if k in best else "#F1EAFB"};color:{"#fff" if k in best else "#4E2A84"}">{k}</span>'
+        for k in row) + "</div>" for row in key_rows)
+
+    left, mid, right = st.columns([1, 2, 1])
+    with mid:
+        if not state["over"]:
+            with st.form("guess", clear_on_submit=True, border=False):
+                g1, g2 = st.columns([3, 1])
+                guess = g1.text_input("Your guess", max_chars=5, placeholder="Type a 5-letter word", label_visibility="collapsed")
+                if g2.form_submit_button("Guess", type="primary"):
+                    guess = guess.strip().upper()
+                    if len(guess) != 5 or not guess.isalpha():
+                        st.warning("Please type exactly 5 letters.")
+                    else:
+                        storage.add_guess(today_key, guess)
+                        st.rerun()
+            st.markdown(f'<div class="pz-keys">{keys}</div>', unsafe_allow_html=True)
+            if len(state["guesses"]) >= 3:
+                st.caption(f"💡 Hint: today's word starts with **{state['answer'][0]}**.")
+            st.caption("🟩 right letter, right spot · 🟨 in the word, wrong spot · ⬜ not in the word. "
+                       "Today's word is about health, food or feeling good.")
+        else:
+            if state["won"]:
+                st.markdown(ui.card(f"🎉 You got it in {len(state['guesses'])}!", f"Today's word: <b>{state['answer']}</b>"),
+                            unsafe_allow_html=True)
+            else:
+                st.markdown(ui.card("🌱 Nice try!", f"Today's word was <b>{state['answer']}</b>. Tomorrow's a fresh start."),
+                            unsafe_allow_html=True)
+            st.markdown(ui.card("💡 Did you know?", ui.html.escape(games.WORDS[state["answer"]])), unsafe_allow_html=True)
+            share = games.puzzle_share(state)
+            st.code(share, language=None)
+            st.link_button("📲 Share on WhatsApp", games.whatsapp(share), type="primary")
+            st.caption(f"That's today's puzzle done! Come back tomorrow for word #{state['number'] + 1}. "
+                       "One a day keeps it fun, not addictive. 🌿")
 
 
 elif page == "📸 Food scan":

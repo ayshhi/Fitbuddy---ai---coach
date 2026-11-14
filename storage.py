@@ -260,17 +260,57 @@ def save_seen_badges(names: list[str]) -> None:
 
 
 
-# ---------- Walk challenge and friends ----------
+# ---------- Tulsi's daily plans (a checklist for each day) ----------
+# {"2026-11-15": {"made_on": "2026-11-14", "items": [{"text": "20-min walk after lunch", "done": false}, ...]}}
 
-CHALLENGE_FILE = DATA_DIR / "challenge.json"
-
-
-def load_challenge() -> dict:
-    return _read(CHALLENGE_FILE, {})
+PLANS_FILE = DATA_DIR / "plans.json"
 
 
-def save_challenge(data: dict) -> None:
-    _write(CHALLENGE_FILE, data)
+def load_plans() -> dict:
+    return _read(PLANS_FILE, {})
+
+
+def save_plan(for_day: str, made_on: str, items: list[str]) -> None:
+    plans = load_plans()
+    plans[for_day] = {"made_on": made_on, "items": [{"text": t, "done": False} for t in items]}
+    _write(PLANS_FILE, plans)
+
+
+def set_plan_item(for_day: str, index: int, done: bool) -> None:
+    plans = load_plans()
+    if for_day in plans and 0 <= index < len(plans[for_day]["items"]):
+        plans[for_day]["items"][index]["done"] = done
+        _write(PLANS_FILE, plans)
+
+
+# ---------- Games ----------
+# bingo.json: {"2026-W46": [3, 7, 12]}   (square positions you ticked by hand)
+# puzzles.json: {"2026-11-14": {"guesses": ["WATER", "SLEEP"]}}
+
+BINGO_FILE = DATA_DIR / "bingo.json"
+PUZZLES_FILE = DATA_DIR / "puzzles.json"
+
+
+def load_bingo() -> dict:
+    return _read(BINGO_FILE, {})
+
+
+def toggle_bingo(week: str, square: int) -> None:
+    data = load_bingo()
+    squares = set(data.get(week, []))
+    squares ^= {square}
+    data[week] = sorted(squares)
+    _write(BINGO_FILE, data)
+
+
+def load_puzzles() -> dict:
+    return _read(PUZZLES_FILE, {})
+
+
+def add_guess(day: str, guess: str) -> None:
+    data = load_puzzles()
+    data.setdefault(day, {"guesses": []})["guesses"].append(guess)
+    _write(PUZZLES_FILE, data)
 
 
 # ---------- PCOS symptoms (their own log) ----------
@@ -310,26 +350,3 @@ def set_craving_outcome(index: int, outcome: str) -> None:
     if 0 <= index < len(data):
         data[index]["outcome"] = outcome
         _write(CRAVINGS_FILE, data)
-
-
-# ---------- Tulsi's daily plans (a checklist for each day) ----------
-# {"2026-11-15": {"made_on": "2026-11-14", "items": [{"text": "20-min walk after lunch", "done": false}, ...]}}
-
-PLANS_FILE = DATA_DIR / "plans.json"
-
-
-def load_plans() -> dict:
-    return _read(PLANS_FILE, {})
-
-
-def save_plan(for_day: str, made_on: str, items: list[str]) -> None:
-    plans = load_plans()
-    plans[for_day] = {"made_on": made_on, "items": [{"text": t, "done": False} for t in items]}
-    _write(PLANS_FILE, plans)
-
-
-def set_plan_item(for_day: str, index: int, done: bool) -> None:
-    plans = load_plans()
-    if for_day in plans and 0 <= index < len(plans[for_day]["items"]):
-        plans[for_day]["items"][index]["done"] = done
-        _write(PLANS_FILE, plans)

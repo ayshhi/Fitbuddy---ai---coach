@@ -280,6 +280,11 @@ def journey_to_text(profile: dict) -> str:
         lines.append(f"- Cravings logged this week: {len(cravings)} "
                      f"(mostly {max(set(c['kind'] for c in cravings), key=[c['kind'] for c in cravings].count)}; "
                      f"triggers: {', '.join(sorted(set(c.get('trigger', '') for c in cravings)))})")
+    try:
+        import games
+        lines.append(f"- Wellness Bingo this week: {len(games.ticked())}/25 squares, {games.bingo_lines(games.ticked())} bingo(s).")
+    except Exception:
+        pass
     wins = storage.load_wins()[-5:]
     if wins:
         lines.append("- Recent non-scale wins: " + "; ".join(f"{w['emoji']} {w['text']}" for w in wins))

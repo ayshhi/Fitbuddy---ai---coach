@@ -178,6 +178,19 @@ I slept on it and asked myself what would stop me using FitBuddy for months, not
 - **Plans you can actually see:** after a check-in, the plan card now shows *Tomorrow's plan is ready*, and on a day
   with no plan, *Make today's plan* asks Tulsi for 3 tiny steps straight away.
 
+## Step 13 (14 Nov): Replacing the board game with games that feel good
+
+The Garden Path still felt like a chore with a score. I wanted games that are good for the brain, social, give small
+satisfying wins, and are **not addictive**, especially for women with PCOS, where stress and screen time matter.
+I replaced it with two games, each with a built-in limit:
+
+- **Wellness Bingo (weekly):** the same card for everyone that week (the week number is the random seed), so friends
+  can play together without any server. The squares are real-life self-care tasks that help PCOS (sunlight,
+  movement, sleep, connection, less sugar), so the reward comes from doing things off the screen.
+- **Tulsi's Daily Word (one a day):** a Wordle-style puzzle where the date is the seed, so everyone gets the same
+  word. I scored repeated letters properly (a letter is only marked as often as it appears in the answer). After
+  one puzzle it says "come back tomorrow" on purpose.
+
 ---
 
 ## What I learned
