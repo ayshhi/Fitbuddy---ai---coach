@@ -194,6 +194,17 @@ I replaced it with two games, each with a built-in limit:
   "reveal a letter" hint.
 - **Bingo layout:** on my wide screen the 5 columns wrapped and the card fell apart, so I locked it to a 5×5 grid.
 
+## Step 14 (14 Nov): A real crossword generator, and a cleaner bingo
+
+- **Crosswords with themes:** I wanted bigger puzzles and the freedom to choose a topic. I wrote a proper crossword
+  generator: it places the longest word first, then tries every spot where each next word could cross the grid,
+  keeping the spot with the most crossings. A spot is rejected if the new word would touch another word side by side
+  (creating nonsense words) or make the grid too big. It tries 25 times and keeps the best puzzle.
+  I tested 144 puzzles: every run of 2+ letters is a real clued word, there are 9–10 words each, and the largest grid is 13×13.
+  You can also **type any theme** and the AI writes words and clues. I filter out phrases and clues that give away the answer.
+- **Bingo with numbers:** writing every task on the card made it cluttered. Now the card shows big numbers, and tapping
+  one opens a pop-up with the task and "I did it!".
+
 ---
 
 ## What I learned
@@ -205,3 +216,4 @@ I replaced it with two games, each with a built-in limit:
 - How to handle real, messy data (Samsung's export format).
 - Privacy basics: local storage, consent, and keeping secrets out of Git.
 - Statistics in practice: why testing many things at once creates false patterns, and how to correct for it.
+- Testing my own code: small automated checks caught several bugs before they reached the app.

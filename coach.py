@@ -354,6 +354,21 @@ def daily_feedback(profile: dict, checkins: dict, today: str) -> str:
     return call_ai(messages)
 
 
+def theme_words(theme: str) -> list[dict]:
+    """Words and easy clues for a crossword on any theme the user types."""
+    import json
+    prompt = (f'Make crossword words for the theme: "{theme}". Give 16 different single English words (no spaces or '
+              "hyphens), 3 to 10 letters each, that most people in India would know, with a short, easy, friendly clue "
+              "for each. The clue must not contain the word itself. Keep everything kind and family-friendly. "
+              'Reply with ONLY JSON: {"words": [{"word": "MANGO", "clue": "King of fruits in summer"}]}')
+    raw = call_ai([{"role": "user", "content": prompt}], max_tokens=1200, temperature=0.7)
+    start, end = raw.find("{"), raw.rfind("}")
+    try:
+        return json.loads(raw[start:end + 1]).get("words", [])
+    except ValueError:
+        raise CoachError("Tulsi couldn't make words for that theme. Try a different one.")
+
+
 def plan_for_today(profile: dict, checkins: dict) -> list[str]:
     """Three tiny steps for today, when there's no plan yet (e.g. the first morning)."""
     from datetime import date

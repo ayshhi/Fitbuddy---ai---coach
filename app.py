@@ -13,6 +13,7 @@ import pandas as pd
 
 import cards
 import coach
+import crossword
 import food
 import games
 import garden
@@ -39,7 +40,7 @@ def show_error(err: Exception) -> None:
 
 ui.sidebar_brand()
 PAGES = ["🌈 Home", "🏠 Today", "💬 Chat with Tulsi", "📸 Food scan", "🆘 Craving SOS", "🌡️ Symptoms",
-         "🌸 My garden", "🎯 Wellness Bingo", "🧩 Daily Crossword", "📊 Progress", "🩺 Health profile"]
+         "🌸 My garden", "🎯 Wellness Bingo", "🧩 Crossword", "📊 Progress", "🩺 Health profile"]
 page = st.sidebar.radio("Go to", PAGES, key="nav", label_visibility="collapsed")
 
 
@@ -98,7 +99,8 @@ if page == "🌈 Home":
     if streak >= 2:
         chips.append(f"🔥 {streak}-day best streak")
     chips.append(f"🎯 Bingo: {len(games.ticked())}/25 this week")
-    if not games.puzzle_state()["over"]:
+    daily_key, _, daily_cw = crossword.daily()
+    if not crossword.state(daily_key, daily_cw)["over"]:
         chips.append("🧩 Today's crossword is waiting")
     st.markdown(ui.home_html(profile.get("name", ""), chips), unsafe_allow_html=True)
     with st.container(key="letsgo"):
@@ -499,7 +501,7 @@ elif page == "🌡️ Symptoms":
 
 
 elif page == "🎯 Wellness Bingo":
-    ui.hero("🎯", "Wellness Bingo", "Same card for you and your friends this week · a new card every Monday 💜")
+    ui.hero("🎯", "Wellness Bingo", "Same card for you and your friends this week · tap a number to see its task 💜")
     week = games.week_key()
     card = games.bingo_card()
     done = games.ticked()
@@ -507,7 +509,6 @@ elif page == "🎯 Wellness Bingo":
     lines = games.bingo_lines(done)
     days_left = 6 - date.today().weekday()
 
-    # celebrate a new bingo once
     seen = st.session_state.get("bingo_seen", {}).get(week)
     if seen is not None and lines > seen:
         st.balloons()
@@ -519,44 +520,62 @@ elif page == "🎯 Wellness Bingo":
         ("🎯 BINGOS", str(lines), "rows, columns or diagonals"),
         ("📅 DAYS LEFT", str(days_left) if days_left else "Last day!", "new card on Monday"),
     ]), unsafe_allow_html=True)
-    st.caption("Tap a square when you've done it in real life. Squares with ✨ tick themselves from your data. "
-               "Get 5 in a row, column or diagonal for a bingo!")
 
-    # one CSS rule per square, so done squares turn purple
-    css = ['.stApp [class*="st-key-bingo_"] button { min-height: 7.4rem !important; width: 100%; white-space: normal !important; '
-           'border-radius: 20px !important; background: #FFFFFF !important; border: 1.5px solid #E6DDF3 !important; '
-           'padding: .7rem .6rem !important; box-shadow: 0 4px 14px rgba(78,42,132,.06) !important; }',
-           '.stApp [class*="st-key-bingo_"] button p { font-size: .95rem !important; line-height: 1.3 !important; font-weight: 600 !important; color: #2A2140 !important; }',
-           '.stApp [class*="st-key-bingo_"] button:hover { border-color: #C38BEA !important; transform: translateY(-2px); }']
+    def square_body(i: int) -> None:
+        """What you see when you tap a number."""
+        tid, emoji, text, auto_key = card[i]
+        st.markdown(f'<div style="text-align:center;font-size:4rem;line-height:1.2">{emoji}</div>'
+                    f'<div style="text-align:center;font-size:1.4rem;font-weight:800;color:#2A2140;margin:.4rem 0 1rem">'
+                    f'{ui.html.escape(text)}</div>', unsafe_allow_html=True)
+        if tid == "free":
+            st.success("This one is always free. Always true. 💜")
+        elif auto_key and auto_key in auto:
+            st.success("Already done! Your data shows it ✨")
+        elif i in done:
+            st.success("You did this one! 🎉")
+            if st.button("↩️ Oops, not done yet", key=f"undo_{i}"):
+                storage.toggle_bingo(week, i)
+                st.rerun()
+        else:
+            if auto_key:
+                st.caption("✨ This one will also tick itself when your data shows it.")
+            if st.button("✅ I did it!", type="primary", key=f"do_{i}"):
+                storage.toggle_bingo(week, i)
+                st.rerun()
+
+    dialog = getattr(st, "dialog", None) or getattr(st, "experimental_dialog", None)
+    show_square = dialog("Bingo square")(square_body) if dialog else None
+
+    css = ['.st-key-bingo_grid [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: .9rem !important; }',
+           '.st-key-bingo_grid [data-testid="stColumn"], .st-key-bingo_grid [data-testid="column"] { flex: 1 1 0 !important; min-width: 0 !important; }',
+           '.st-key-bingo_grid [data-testid="stVerticalBlock"] { gap: .9rem !important; }',
+           '.st-key-bingo_grid .stButton, .st-key-bingo_grid [class*="st-key-sq_"] { width: 100% !important; }',
+           '.stApp .st-key-bingo_grid button { width: 100% !important; height: clamp(5.5rem, 13vh, 9rem) !important; border-radius: 22px !important; '
+           'background: #FFFFFF !important; border: 2px solid #E6DDF3 !important; box-shadow: 0 6px 18px rgba(78,42,132,.07) !important; }',
+           '.stApp .st-key-bingo_grid button p { font-size: clamp(1.6rem, 3vw, 2.6rem) !important; font-weight: 800 !important; color: #4E2A84 !important; }',
+           '.stApp .st-key-bingo_grid button:hover { border-color: #C38BEA !important; transform: translateY(-3px) scale(1.02); }']
     for i in done:
-        css.append(f'.stApp .st-key-bingo_{i} button {{ background: linear-gradient(135deg, #7B3FBF, #A66BE0) !important; '
-                   f'border-color: transparent !important; box-shadow: 0 8px 20px rgba(123,63,191,.3) !important; }}'
-                   f'.stApp .st-key-bingo_{i} button p {{ color: #FFFFFF !important; }}')
+        css.append(f'.stApp .st-key-sq_{i} button {{ background: linear-gradient(135deg, #7B3FBF, #A66BE0) !important; '
+                   f'border-color: transparent !important; }} .stApp .st-key-sq_{i} button p {{ color: #FFFFFF !important; }}')
     st.markdown("<style>" + "".join(css) + "</style>", unsafe_allow_html=True)
 
-    # keep the card a neat 5x5 grid on every screen: no wrapping, equal columns, squares fill their column
-    st.markdown("""<style>
-    .st-key-bingo_grid [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: .8rem !important; }
-    .st-key-bingo_grid [data-testid="stColumn"], .st-key-bingo_grid [data-testid="column"] {
-        flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; }
-    .st-key-bingo_grid [data-testid="stVerticalBlock"] { gap: .8rem !important; }
-    .st-key-bingo_grid .stButton, .st-key-bingo_grid [class*="st-key-bingo_"] { width: 100% !important; }
-    .st-key-bingo_grid button { width: 100% !important; height: 7.6rem !important; }
-    </style>""", unsafe_allow_html=True)
     grid = st.container(key="bingo_grid")
     for r in range(5):
         cols = grid.columns(5)
         for c in range(5):
             i = r * 5 + c
-            tid, emoji, text, auto_key = card[i]
-            mark = "✅ " if i in done else ""
-            sparkle = " ✨" if auto_key and auto_key in auto else ""
-            if cols[c].button(f"{mark}{emoji} {text}{sparkle}", key=f"bingo_{i}"):
-                if tid == "free" or (auto_key and auto_key in auto):
-                    st.toast("This one is already ticked ✨" if tid != "free" else "Always free, always true 💜")
+            label = "💜" if card[i][0] == "free" else (f"✓ {i + 1}" if i in done else str(i + 1))
+            if cols[c].button(label, key=f"sq_{i}"):
+                if show_square:
+                    show_square(i)
                 else:
-                    storage.toggle_bingo(week, i)
-                    st.rerun()
+                    st.session_state.bingo_open = i
+    if not show_square and st.session_state.get("bingo_open") is not None:
+        with st.container(border=True):
+            square_body(st.session_state.bingo_open)
+
+    if done - {12}:
+        st.markdown("**Done this week:** " + " · ".join(f"{card[i][1]} {card[i][2]}" for i in sorted(done) if i != 12))
 
     ui.section("Share with friends", "Your friends see the same card this week. Send your progress and invite them!")
     share = games.bingo_share(profile.get("name", ""), done)
@@ -567,65 +586,110 @@ elif page == "🎯 Wellness Bingo":
         st.caption("Tip: make a WhatsApp group with friends and share every Sunday. Nobody loses, everyone gets healthier. 🌿")
 
 
-elif page == "🧩 Daily Crossword":
-    ui.hero("🧩", "Tulsi's Daily Crossword", "Easy clues about health and food · same puzzle for everyone · one a day 🌿")
-    state = games.puzzle_state()
-    st.markdown("""<style>
-    .cw-grid { display:flex; flex-direction:column; gap:.35rem; align-items:center; padding: .6rem 0 1rem; }
-    .cw-row { display:flex; gap:.35rem; }
-    .cw-cell { position:relative; width:3.3rem; height:3.3rem; border-radius:12px; background:#FFFFFF; border:2px solid #D9C8F2;
-               display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:800; color:#4E2A84; }
-    .cw-empty { background:transparent; border-color:transparent; }
-    .cw-filled { background:#EEF8F2; border-color:#A8DDBE; color:#1E6B45; animation: cw-pop .35s ease both; }
-    .cw-num { position:absolute; top:.15rem; left:.3rem; font-size:.7rem; font-weight:700; color:#9A90AE; }
-    @keyframes cw-pop { from { transform: scale(.8); } to { transform: none; } }
-    </style>""", unsafe_allow_html=True)
-
-    grid_col, clue_col = st.columns([1, 1])
-    with grid_col:
-        st.markdown(f'<div class="soft-panel">{games.crossword_html(state)}</div>', unsafe_allow_html=True)
-        st.caption(f"{len(state['solved'])} of {len(state['entries'])} words solved · "
-                   "letters from words you solve help with the words that cross them")
-
-    with clue_col:
-        if state["over"]:
-            if st.session_state.pop("cw_just_done", False):
-                st.balloons()
-            st.markdown(ui.card("🎉 Crossword solved!", f"{state['checks']} check(s), {state['hints']} hint(s). Well done!"),
-                            unsafe_allow_html=True)
-            share = games.puzzle_share(state)
-            st.code(share, language=None)
-            st.link_button("📲 Share on WhatsApp", games.whatsapp(share), type="primary")
-            st.caption(f"That's today's puzzle done. Come back tomorrow for crossword #{state['number'] + 1}. "
-                       "One a day keeps it fun, not addictive. 🌿")
-        else:
-            with st.form("crossword", border=False):
-                answers = {}
-                for e in state["entries"]:
-                    label = f"{e['num']} {e['dir']} · {e['clue']} ({len(e['word'])} letters)"
-                    if e["id"] in state["solved"]:
-                        st.markdown(f"✅ **{e['num']} {e['dir']}** · {e['clue']}: **{e['word']}**")
+elif page == "🧩 Crossword":
+    ui.hero("🧩", "Tulsi's Crosswords", "Easy clues, crossing words, a little brain workout 🌿")
+    mode = st.radio("Mode", ["📅 Today's crossword", "🗂️ Pick a theme", "✍️ My own theme"], horizontal=True,
+                    label_visibility="collapsed", key="cw_mode")
+    puzzle = None
+    rounds = st.session_state.setdefault("cw_rounds", {})
+    if mode.startswith("📅"):
+        puzzle = crossword.daily()
+        st.caption("Everyone gets this same puzzle today, so you can compare with friends. A new one every day.")
+    elif mode.startswith("🗂️"):
+        theme = st.radio("Theme", list(crossword.THEMES), horizontal=True, key="cw_theme")
+        puzzle = crossword.themed(theme, rounds.get(theme, 0))
+        if st.button("🔀 Give me a different puzzle", key="cw_new_theme"):
+            rounds[theme] = rounds.get(theme, 0) + 1
+            st.rerun()
+    else:
+        with st.form("own_theme", border=False):
+            c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
+            typed = c1.text_input("Type any theme", placeholder="e.g. Onam festival, monsoon foods, Bollywood dance, my favourite things")
+            go = c2.form_submit_button("✨ Make my crossword", type="primary")
+        if go and typed.strip():
+            with st.spinner("Tulsi is writing words and clues for you..."):
+                try:
+                    clues = crossword.clean_word_list(coach.theme_words(typed.strip()))
+                    if len(clues) < 6:
+                        st.warning("Tulsi couldn't find enough words for that theme. Try something a bit broader.")
                     else:
-                        answers[e["id"]] = st.text_input(label, key=f"cw_{e['id']}", max_chars=len(e["word"]),
-                                                         placeholder="_ " * len(e["word"]))
-                checked = st.form_submit_button("✔️ Check my answers", type="primary")
-            if checked:
-                result = games.check_answers(answers)
-                wrong = [e for e in state["entries"] if result.get(e["id"]) is False]
-                if games.puzzle_state()["over"]:
-                    st.session_state.cw_just_done = True
-                st.session_state.cw_feedback = (
-                    "Not quite: " + ", ".join(f"{e['num']} {e['dir']}" for e in wrong) + ". Try again or reveal a letter! 💜"
-                    if wrong else ("All correct so far! 🎉" if result else "Type an answer first 🙂"))
+                        storage.save_custom_theme(crossword.slug(typed), typed.strip(), clues)
+                        st.session_state.cw_custom = crossword.slug(typed)
+                except coach.CoachError as err:
+                    show_error(err)
+        saved = storage.load_custom_themes()
+        if saved:
+            names = list(saved)
+            current = st.session_state.get("cw_custom") if st.session_state.get("cw_custom") in saved else names[-1]
+            pick = st.radio("Your themes", names, index=names.index(current), horizontal=True,
+                            format_func=lambda k: saved[k]["theme"].title(), key="cw_custom_pick")
+            puzzle = crossword.custom(saved[pick]["theme"], saved[pick]["clues"], rounds.get(pick, 0))
+            if st.button("🔀 Give me a different puzzle", key="cw_new_custom"):
+                rounds[pick] = rounds.get(pick, 0) + 1
                 st.rerun()
-            if st.session_state.get("cw_feedback"):
-                st.info(st.session_state.pop("cw_feedback"))
-            st.markdown("**Stuck?** Reveal one letter at a time:")
-            open_entries = [e for e in state["entries"] if e["id"] not in state["solved"]]
-            cols = st.columns(min(4, len(open_entries)) or 1)
-            for i, e in enumerate(open_entries):
-                if cols[i % len(cols)].button(f"💡 {e['num']} {e['dir']}", key=f"rev_{e['id']}"):
-                    games.reveal_letter(e["id"])
+
+    if puzzle:
+        key, title, cw = puzzle
+        state = crossword.state(key, cw)
+        size = "3.1rem" if state["cols"] <= 10 else "2.6rem"
+        st.markdown(f"""<style>
+        .cw-grid {{ display:flex; flex-direction:column; gap:.3rem; align-items:center; padding: .6rem 0 .8rem; }}
+        .cw-row {{ display:flex; gap:.3rem; }}
+        .cw-cell {{ position:relative; width:{size}; height:{size}; border-radius:10px; background:#FFFFFF; border:2px solid #D9C8F2;
+                   display:flex; align-items:center; justify-content:center; font-size:1.4rem; font-weight:800; color:#4E2A84; }}
+        .cw-empty {{ background:transparent; border-color:transparent; }}
+        .cw-filled {{ background:#EEF8F2; border-color:#A8DDBE; color:#1E6B45; animation: cw-pop .35s ease both; }}
+        .cw-num {{ position:absolute; top:.1rem; left:.25rem; font-size:.62rem; font-weight:700; color:#9A90AE; }}
+        @keyframes cw-pop {{ from {{ transform: scale(.8); }} to {{ transform: none; }} }}
+        </style>""", unsafe_allow_html=True)
+
+        grid_col, clue_col = st.columns([5, 4])
+        with grid_col:
+            st.markdown(f'<div class="soft-panel"><div style="font-weight:800;font-size:1.15rem;color:#4E2A84;text-align:center">'
+                        f'{ui.html.escape(title)}</div>{crossword.grid_html(state)}</div>', unsafe_allow_html=True)
+            st.markdown(ui.growbar(len(state["solved"]) / len(state["entries"]) * 100), unsafe_allow_html=True)
+            st.caption(f"{len(state['solved'])} of {len(state['entries'])} words solved · solved words fill in letters "
+                       "that help with the words crossing them")
+
+        with clue_col:
+            if state["over"]:
+                if st.session_state.pop("cw_just_done", False):
+                    st.balloons()
+                st.markdown(ui.card("🎉 Crossword solved!", f"{len(state['entries'])} words, {state['hints']} hint(s). Brilliant!"),
+                            unsafe_allow_html=True)
+                share = crossword.share_text(state, title)
+                st.code(share, language=None)
+                st.link_button("📲 Share on WhatsApp", games.whatsapp(share), type="primary")
+                st.caption("Want another? Pick a theme or type your own above. 🌿")
+            else:
+                with st.form(f"cw_form_{key}", border=False):
+                    answers = {}
+                    for direction in ("Across", "Down"):
+                        st.markdown(f"**{direction}**")
+                        for e in [x for x in state["entries"] if x["dir"] == direction]:
+                            if e["id"] in state["solved"]:
+                                st.markdown(f"✅ **{e['num']}** · {e['clue']}: **{e['word']}**")
+                            else:
+                                answers[e["id"]] = st.text_input(f"{e['num']} · {e['clue']} ({len(e['word'])})",
+                                                                 key=f"cw_{key}_{e['id']}", max_chars=len(e["word"]))
+                    checked = st.form_submit_button("✔️ Check my answers", type="primary")
+                if checked:
+                    result = crossword.check(key, cw, answers)
+                    wrong = [e for e in state["entries"] if result.get(e["id"]) is False]
+                    if crossword.state(key, cw)["over"]:
+                        st.session_state.cw_just_done = True
+                    st.session_state.cw_feedback = (
+                        "Not quite: " + ", ".join(f"{e['num']} {e['dir']}" for e in wrong) + ". Try again or reveal a letter 💜"
+                        if wrong else ("All correct so far! 🎉" if result else "Type an answer first 🙂"))
+                    st.rerun()
+                if st.session_state.get("cw_feedback"):
+                    st.info(st.session_state.pop("cw_feedback"))
+                open_entries = [e for e in state["entries"] if e["id"] not in state["solved"]]
+                r1, r2 = st.columns([3, 2], vertical_alignment="bottom")
+                stuck = r1.selectbox("Stuck on one?", open_entries, key=f"cw_stuck_{key}",
+                                     format_func=lambda e: f"{e['num']} {e['dir']}: {e['clue'][:40]}")
+                if r2.button("💡 Reveal a letter", key=f"cw_reveal_{key}"):
+                    crossword.reveal(key, stuck["id"])
                     st.rerun()
 
 

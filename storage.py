@@ -348,3 +348,14 @@ def set_craving_outcome(index: int, outcome: str) -> None:
     if 0 <= index < len(data):
         data[index]["outcome"] = outcome
         _write(CRAVINGS_FILE, data)
+
+
+def save_custom_theme(slug: str, theme: str, clues: dict) -> None:
+    """Remembers words Tulsi made for your own crossword themes, so you can replay them."""
+    data = load_puzzles()
+    data.setdefault("_custom", {})[slug] = {"theme": theme, "clues": clues}
+    save_puzzles(data)
+
+
+def load_custom_themes() -> dict:
+    return load_puzzles().get("_custom", {})
