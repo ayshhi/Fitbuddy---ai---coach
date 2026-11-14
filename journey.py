@@ -30,6 +30,11 @@ def all_days() -> dict:
     for d, glasses in storage.load_water().items():
         if glasses:
             rows.setdefault(d, {})["water"] = glasses
+    for d, entries in storage.load_exercises().items():  # exercise you logged on the Exercise page
+        if entries:
+            r = rows.setdefault(d, {})
+            r["workout_min"] = max(float(r.get("workout_min", 0) or 0), float(sum(e["minutes"] for e in entries)))
+            r["exercise_kcal"] = sum(e["kcal"] for e in entries)
     return rows
 
 

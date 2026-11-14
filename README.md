@@ -33,6 +33,17 @@ and my cycle became regular again.
 - **🩺 Doctor report**: a one-page PDF summary of weight, cycle, sleep, activity and symptoms for appointments.
 - **🌿 Tulsi mascot**: bounces in the corner, waves, and smiles with floating hearts when you click her.
 
+- **🔥 Exercise: specific home workouts**: 6 ready-made workouts with exact sets and reps, like the **🔥 15-min fat-burn
+  warm-up** (jumping jacks 2 × 45 sec, high knees, squat jumps 3 × 10, mountain climbers 3 × 30 sec, 3 min skipping rope…),
+  lower-body strength, core & plank, HIIT, full-body beginner and a period-friendly gentle session. Every move shows how to do it
+  and the **estimated calories for your weight** (MET × weight × time, including rests). Tick the moves you did, or log a single
+  move like "Plank: 3 × 60 sec". Tulsi suggests the right workout for today from your cycle phase, sleep, stress and energy.
+  A **sun gets brighter** as you approach your daily burn goal, with a weekly chart. Samsung Health walks are included automatically.
+- **🥗 Food & diet: a real daily meal plan**: a calorie target worked out from your height, weight and age (Mifflin-St Jeor,
+  a gentle 400 kcal deficit, never below 1,200) and a protein goal (1.2 g per kg). Then 4 specific, PCOS-friendly Kerala and
+  Indian meals with portions, calories and protein, for vegetarian, eggs + veg or non-veg. **🔀 Swap** any meal and tap
+  **✅ I ate this** to log it. Food photo scanning is on the same page.
+
 ### Built for real daily use
 - **💬 Just tell Tulsi**: describe your day in your own words (typed or spoken), like *"slept 6 hours, walked 30 min, dosa for
   breakfast, bit stressed"*. Tulsi fills in your check-in, meals, water and symptoms. You confirm with one tap. Logging takes 10 seconds.

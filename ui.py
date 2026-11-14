@@ -40,7 +40,12 @@ CSS = """
 }
 /* Bigger text everywhere (no more zooming), and content centred at a comfortable width */
 /* Text and layout grow with the screen, so big / high-resolution monitors aren't tiny */
-html { font-size: clamp(18px, 1.3vw, 36px); }
+html { font-size: clamp(18px, calc(1vw + 5px), 34px) !important; }
+/* on computer screens, keep columns side by side instead of letting them wrap onto new lines */
+@media (min-width: 900px) {
+  [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; }
+  [data-testid="stColumn"], [data-testid="column"] { min-width: 0 !important; }
+}
 .stApp { overflow-x: hidden; }
 .block-container { padding-top: 2.2rem; padding-left: 3rem; padding-right: 3rem;
                    max-width: 100% !important; margin: 0 auto; }
@@ -233,6 +238,7 @@ def scroll_to_bottom() -> None:
 
 
 def coach_bubbles(text: str) -> list[dict]:
+    text = re.sub(r"(?im)^\s*\**PLAN\**\s*:.*$", "", text).strip()  # the app reads PLAN lines; people don't need to see them
     t = now_time()
     return [{"role": "assistant", "content": part, "time": t} for part in split_messages(text)]
 
@@ -587,7 +593,7 @@ def section(title: str, subtitle: str = "") -> None:
 HOME_CSS = """
 <style>
 .home { position:relative; text-align:center; padding: 1rem 0 0; }
-.home .sky { position:relative; width:min(46rem, 92%); margin:0 auto; }
+.home .sky { position:relative; width:min(56rem, 94%); margin:0 auto; }
 .home .sky svg { width:100%; height:auto; display:block; overflow:visible; }
 .home .arc { fill:none; stroke-linecap:round; stroke-dasharray: 1000; stroke-dashoffset: 1000;
              animation: draw-arc 1.6s ease-out forwards; }
@@ -597,7 +603,7 @@ HOME_CSS = """
 .home .tulsi .t-shadow { transform-origin: 60px 124px; animation: home-shadow 2.2s ease-in-out infinite; }
 .home .tulsi .t-wave { transform-origin: 60px 33px; animation: home-wave 1.1s ease-in-out infinite; }
 .home .tulsi .t-happy { display:none; }
-.home h1 { font-size: 2.6rem !important; color: var(--ink) !important; margin: 1.2rem 0 .2rem !important;
+.home h1 { font-size: 3rem !important; color: var(--ink) !important; margin: 1.2rem 0 .2rem !important;
            animation: rise .8s .9s both; }
 .home p.lead { font-size: 1.15rem !important; color: var(--muted) !important; animation: rise .8s 1.1s both; }
 .home .chips { display:flex; justify-content:center; gap:.8rem; flex-wrap:wrap; margin: 1rem 0 .4rem; animation: rise .8s 1.3s both; }
@@ -609,8 +615,8 @@ HOME_CSS = """
   25% { transform: translateY(-24px) scale(.95,1.06); } 42% { transform: translateY(0) scale(1.07,.93); } 50% { transform: translateY(0); } }
 @keyframes home-shadow { 0%, 60%, 100% { transform: scale(1); opacity:.12; } 25% { transform: scale(.65); opacity:.06; } }
 @keyframes home-wave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-22deg); } }
-.st-key-letsgo { display:flex; justify-content:center; }
-.st-key-letsgo button { font-size: 1.25rem !important; padding: .8rem 2.6rem !important; border-radius: 999px !important;
+.st-key-letsgo, .st-key-letsgo .stButton, .st-key-letsgo [data-testid="stButton"] { display:flex; justify-content:center; width:100%; }
+.st-key-letsgo button { width: 100% !important; font-size: 1.25rem !important; padding: .8rem 2.6rem !important; border-radius: 999px !important;
                         background: linear-gradient(135deg, #7B3FBF, #C38BEA) !important; border: none !important; color: #fff !important;
                         box-shadow: 0 10px 28px rgba(123,63,191,.35); animation: rise .8s 1.5s both; }
 .st-key-letsgo button p { font-size: 1.25rem !important; color:#fff !important; font-weight:700; }
@@ -796,7 +802,8 @@ div[data-testid="stExpander"] { background:#FFFFFF; border: 1px solid #E6DDF3 !i
 div[data-testid="stExpander"] summary p { font-weight: 700 !important; color: #4E2A84 !important; }
 
 /* coloured accent strip on the check-in cards */
-.st-key-ck_sleep, .st-key-ck_food, .st-key-ck_feel { position: relative; overflow: hidden; }
+.st-key-ck_sleep, .st-key-ck_food, .st-key-ck_feel, .st-key-ck_log { position: relative; overflow: hidden; }
+.st-key-ck_log::before { content:""; position:absolute; left:0; top:0; right:0; height:6px; background: linear-gradient(90deg, #FFD23F, #FF9F1C); }
 .st-key-ck_sleep::before, .st-key-ck_food::before, .st-key-ck_feel::before { content:""; position:absolute; left:0; top:0; right:0; height:6px; }
 .st-key-ck_sleep::before { background: linear-gradient(90deg, #7CC4F5, #9B8CF0); }
 .st-key-ck_food::before { background: linear-gradient(90deg, #F7B267, #F28B82); }

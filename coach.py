@@ -281,6 +281,13 @@ def journey_to_text(profile: dict) -> str:
                      f"(mostly {max(set(c['kind'] for c in cravings), key=[c['kind'] for c in cravings].count)}; "
                      f"triggers: {', '.join(sorted(set(c.get('trigger', '') for c in cravings)))})")
     try:
+        import exercise
+        today_ex = exercise.day_total(date.today().isoformat())
+        goal = int(profile.get("burn_goal") or exercise.DEFAULT_GOAL)
+        lines.append(f"- Exercise today: {today_ex['minutes']} min, about {today_ex['kcal']} kcal burned (daily goal {goal} kcal).")
+    except Exception:
+        pass
+    try:
         import games
         lines.append(f"- Wellness Bingo this week: {len(games.ticked())}/25 squares, {games.bingo_lines(games.ticked())} bingo(s).")
     except Exception:
@@ -388,20 +395,31 @@ def plan_for_today(profile: dict, checkins: dict) -> list[str]:
 
 
 def extract_plan(reply: str) -> tuple[str, list[str]]:
-    """Splits Tulsi's reply into (text to show, plan items). Falls back to her bullet points."""
+    """Splits Tulsi's reply into (text to show, plan items).
+    Handles "PLAN: a | b | c" on one line, "PLAN:" followed by bullet lines, and falls back to her bullets."""
     import re
-    lines = reply.strip().splitlines()
-    items, kept = [], []
-    for line in lines:
-        m = re.match(r"\s*\**PLAN\**\s*:\s*(.+)", line, flags=re.I)
+    bullet = re.compile(r"^\s*(?:[-•*]|\d+[.)])\s+(.*)")
+    items, kept, collecting = [], [], False
+    for line in reply.strip().splitlines():
+        m = re.match(r"\s*\**PLAN\**\s*:\s*(.*)", line, flags=re.I)
         if m and not items:
-            items = [x.strip(" .*-") for x in m.group(1).split("|") if x.strip(" .*-")]
-        else:
-            kept.append(line)
+            rest = m.group(1).strip()
+            if rest:
+                items = [x.strip(" .*-") for x in rest.split("|") if x.strip(" .*-")]
+            else:
+                collecting = True  # the steps are on the next lines
+            continue
+        if collecting:
+            b = bullet.match(line)
+            if b:
+                items.append(b.group(1).strip(" .*"))
+                continue
+            if line.strip():
+                collecting = False
+        kept.append(line)
     text = "\n".join(kept).strip()
     if not items:  # the model forgot the PLAN line: use the first bullets instead
-        bullets = [re.sub(r"^\s*(?:[-•*]|\d+[.)])\s+", "", l).strip() for l in kept if re.match(r"^\s*(?:[-•*]|\d+[.)])\s+", l)]
-        items = bullets[:3]
+        items = [bullet.match(l).group(1).strip() for l in kept if bullet.match(l)][:3]
     return text, items[:3]
 
 
@@ -512,6 +530,11 @@ QUICK_ACTIONS = {
         "One message per day with a warm-up, 4-5 exercises with reps or time, and a cool-down. "
         "Adjust the intensity to my recent sleep, stress and energy, and keep it apartment-friendly "
         "(quiet, small space)." + PLAN_RULES
+    ),
+    "🔥 Today's workout": (
+        "Give me a home workout for today with no equipment, adjusted to my cycle phase, sleep, stress and energy. "
+        "List each exercise with time or reps and roughly how many calories the whole workout burns for my weight. "
+        "Keep it achievable and kind." + PLAN_RULES
     ),
     "⏱️ 10-min home workout": (
         "Give me a 10-minute, no-equipment home workout I can do right now, adjusted to my energy and "

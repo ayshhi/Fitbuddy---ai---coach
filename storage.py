@@ -359,3 +359,26 @@ def save_custom_theme(slug: str, theme: str, clues: dict) -> None:
 
 def load_custom_themes() -> dict:
     return load_puzzles().get("_custom", {})
+
+
+# ---------- Exercise log ----------
+# {"2026-11-14": [{"name": "Brisk walk", "emoji": "🚶‍♀️", "minutes": 30, "kcal": 140, "source": "you"}]}
+
+EXERCISE_FILE = DATA_DIR / "exercise.json"
+
+
+def load_exercises() -> dict:
+    return _read(EXERCISE_FILE, {})
+
+
+def add_exercise(day: str, entry: dict) -> None:
+    data = load_exercises()
+    data.setdefault(day, []).append(entry)
+    _write(EXERCISE_FILE, data)
+
+
+def delete_exercise(day: str, index: int) -> None:
+    data = load_exercises()
+    if 0 <= index < len(data.get(day, [])):
+        data[day].pop(index)
+        _write(EXERCISE_FILE, data)

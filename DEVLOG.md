@@ -205,6 +205,37 @@ I replaced it with two games, each with a built-in limit:
 - **Bingo with numbers:** writing every task on the card made it cluttered. Now the card shows big numbers, and tapping
   one opens a pop-up with the task and "I did it!".
 
+## Step 15 (14 Nov): The feature that actually helped me, and less clutter
+
+Looking back at my own journey, the thing AI helped with most was **exercise**: which exercises to do without
+stressing my body, and how many calories they burned. The app didn't have a proper place for that, so I added an
+**Exercise page**:
+- Calories are estimated with **METs** (how hard an activity is compared with resting): calories ≈ MET × weight × hours,
+  using my latest weight. Samsung's own number is used for walks it recorded.
+- **Suggestions** change with my day: gentle yoga, walking and stretching on period days, low-sleep or high-stress days
+  (to keep cortisol down), and more strength work when energy is usually higher in my cycle.
+- A **sun** that wakes up and shines brighter as I get closer to my daily burn goal. It's motivating without numbers
+  feeling like pressure.
+- Exercise I tell Tulsi about ("walked 30 min") is added to the log automatically.
+
+Decluttering: I removed the banner at the top of every page, made the bingo card compact, centred the Home button,
+fixed columns wrapping on wide screens, and hid a stray "PLAN:" line that sometimes showed up in the chat.
+
+## Step 16 (14 Nov): Specific, not generic
+
+The exercise page still said things like "Home strength, 20 min". That's not how I actually lost weight. I did
+**specific moves**: a 15-minute warm-up of squat jumps, mountain climbers and skipping rope, 1-minute planks, lunges and
+squats, and I ate a **proper planned diet**. So I made both specific:
+- **Moves library** (25 moves, each with a how-to tip and a MET value) and **6 workouts with exact sets and reps**.
+  Calories include rest between sets (at a light MET of 3), so the numbers stay realistic: my 15-min warm-up is ~97 kcal
+  at 63 kg, and 3 × 1-min planks is ~12 kcal. I added a note that planks don't burn much but build strength.
+- You can tick the moves you finished or log one move ("Lunges, 3 × 12 reps"). Each log saves the detail, like "3 × 10 reps".
+- **Meal plan**: daily calorie target with the Mifflin-St Jeor formula (BMR × 1.375 for light activity, minus 400 kcal,
+  never below 1,200) and a protein goal. Meals are real Kerala/Indian dishes with portions (puttu + kadala curry, matta rice
+  + fish curry, egg curry + chapatis…), filtered by veg, egg or non-veg. The plan changes each day, any meal can be swapped,
+  and "I ate this" logs it. If the plan is low on protein, it suggests easy add-ons like an egg or curd.
+- To reduce clutter, Food scan moved into the same page as a tab, so the menu is one item shorter.
+
 ---
 
 ## What I learned

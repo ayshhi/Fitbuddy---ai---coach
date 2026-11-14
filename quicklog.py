@@ -52,6 +52,11 @@ def save(day: str, parsed: dict) -> dict:
         entry["calories"] = storage.day_calories(day)
         entry["foods"] = storage.day_foods(day)
 
+    if parsed.get("exercise_minutes"):
+        import exercise
+        name = exercise.guess_exercise(parsed.get("exercise") or "")
+        exercise.add(day, name, int(parsed["exercise_minutes"]), storage.load_profile(), source="quick log")
+
     if parsed.get("water_glasses") is not None:
         storage.set_water(day, max(storage.water_today(day), parsed["water_glasses"]))
     if parsed.get("symptoms"):
