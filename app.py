@@ -1,5 +1,5 @@
 """
-app.py - the FitBuddy app you see in the browser (built with Streamlit).
+app.py - the Tulsi app you see in the browser (built with Streamlit).
 
 Run it with:   streamlit run app.py
 """
@@ -14,6 +14,7 @@ import pandas as pd
 import cards
 import coach
 import crossword
+import workouts
 import cycle
 import diet
 import exercise
@@ -27,7 +28,7 @@ import samsung
 import storage
 import ui
 
-st.set_page_config(page_title="FitBuddy - AI Health Coach", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="Tulsi - AI Health Coach", page_icon="🌿", layout="wide")
 ui.inject_css()
 ui.inject_card_css()
 ui.inject_page_css()
@@ -65,7 +66,7 @@ def water_tulsi(day: str) -> None:
 show_tulsi = st.sidebar.toggle("🌿 Tulsi on screen", value=True, key="show_tulsi")
 st.sidebar.divider()
 st.sidebar.caption(
-    "FitBuddy gives general wellness support, not medical advice. "
+    "Tulsi gives general wellness support, not medical advice. "
     "Always talk to your doctor about medical questions."
 )
 
@@ -77,7 +78,10 @@ ui.mascot(profile.get("name", ""), show=show_tulsi and page != "🌈 Home", lift
 # Tulsi in the sidebar, and a celebration whenever a new badge is earned
 _rows = journey.all_days()
 _growth = journey.growth(profile, _rows)
-st.sidebar.markdown(garden.tulsi_img(_growth["stage"], "7rem"), unsafe_allow_html=True)
+st.sidebar.markdown(garden.tulsi_img(_growth["stage"], "7rem", flowers=_growth["old_flowers"]), unsafe_allow_html=True)
+if _growth.get("new_flower"):
+    st.balloons()
+    st.toast("🌸 You reached your goal! Tulsi has a new flower!")
 st.sidebar.caption(f"{_growth['emoji']} Tulsi is a **{_growth['name'].lower()}**")
 _earned = [b for b in journey.badges(profile, _rows) if b["earned"]]
 _first_time = storage.load_seen_badges() is None
@@ -254,7 +258,8 @@ elif page == "🏠 Today":
                 except coach.CoachError as err:
                     show_error(err)
 
-        routine_name, _ = exercise.suggested_routine()
+        _pick = workouts.tulsi_pick()
+        routine_name = f"{workouts.FOCUSES[_pick['focus']][0]} ({workouts.LEVELS[1 if _pick['gentle_day'] else _pick['level']].lower()})"
         target = diet.target(profile)
         cards_spec = [
             ("🏃‍♀️", "Exercise", "#FF9F1C", "🔥 Exercise", f"Tulsi suggests: {routine_name}", "Open my workouts →"),
@@ -383,7 +388,7 @@ elif page == "🏠 Today":
     # ----- Reminders on your phone -----
     with st.expander("⏰ Daily reminders on your phone"):
         st.caption("Pick your reminders, download the file, and your phone's calendar will remind you every day, "
-                   "even when FitBuddy is closed.")
+                   "even when the app is closed.")
         chosen = []
         cols = st.columns(3)
         for i, (key, title, hhmm, desc) in enumerate(reminders.DEFAULTS):
@@ -393,7 +398,7 @@ elif page == "🏠 Today":
                                   label_visibility="collapsed", step=900)
                 if on:
                     chosen.append((title, t.strftime("%H:%M"), desc))
-        st.download_button("📅 Download my reminders", reminders.build_ics(chosen), file_name="fitbuddy_reminders.ics",
+        st.download_button("📅 Download my reminders", reminders.build_ics(chosen), file_name="tulsi_reminders.ics",
                            mime="text/calendar", type="primary", disabled=not chosen)
         st.markdown("**On your phone:** send this file to yourself (WhatsApp or email), tap it, and choose "
                     "**Calendar → Add / Import**.  \n**On Google Calendar (laptop):** Settings → Import & export → Import.")
@@ -768,41 +773,126 @@ elif page == "🧩 Crossword":
 
 elif page == "🔥 Exercise":
     today_str = date.today().isoformat()
-    goal = int(profile.get("burn_goal") or exercise.DEFAULT_GOAL)
     weight = exercise.body_weight(profile)
     total = exercise.day_total(today_str)
-    progress = total["kcal"] / goal if goal else 0
+    pick = workouts.tulsi_pick()
+    burn = workouts.burn_plan(profile, today_str, pick["gentle_day"])
+    goal, progress = burn["goal"], burn["progress"]
 
     sun_col, info_col = st.columns([1, 2], vertical_alignment="center")
     with sun_col:
-        st.markdown(f'<div style="max-width:16rem;margin:0 auto">{exercise.sun_svg(progress)}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="max-width:15rem;margin:0 auto">{exercise.sun_svg(progress)}</div>', unsafe_allow_html=True)
     with info_col:
-        msg = ("☀️ Goal reached! You're shining today!" if progress >= 1 else
+        msg = ("☀️ You're shining today! Goal reached." if progress >= 1 else
                "🌤️ Your sun is waking up. Keep going!" if progress > 0 else "😴 Your sun is still sleepy. Any movement wakes it up!")
-        st.markdown(f'<div style="font-size:2.6rem;font-weight:800;color:#2A2140;line-height:1.1">~{total["kcal"]} kcal burned</div>'
-                    f'<div style="color:#786E8C;font-size:1.1rem">today · goal {goal} kcal · {total["minutes"]:.0f} min moved</div>'
-                    f'<div style="margin:.4rem 0;font-weight:700;color:#4E2A84;font-size:1.15rem">{msg}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:2.2rem;font-weight:800;color:#2A2140;line-height:1.15">{msg}</div>'
+                    f'<div style="color:#786E8C;font-size:1.05rem;margin:.3rem 0">{progress:.0%} of today\'s movement goal · '
+                    f'{total["minutes"]:.0f} min moved</div>', unsafe_allow_html=True)
         st.markdown(ui.growbar(progress * 100), unsafe_allow_html=True)
+        with st.expander("🔢 See the numbers"):
+            st.markdown(ui.tiles([
+                ("🍽️ EATEN TODAY", f"{burn['eaten']:,} kcal", f"your plan: {burn['target']:,} kcal"),
+                ("🔥 BURNED TODAY", f"~{burn['burned']} kcal", f"{total['minutes']:.0f} min of exercise"),
+                ("🎯 TODAY'S GOAL", f"~{goal} kcal", f"{burn['left']} kcal to go" if burn["left"] else "reached!"),
+            ]), unsafe_allow_html=True)
+            extra = (f" You've eaten {burn['extra']} kcal more than your plan so far, so Tulsi added that much (never more than "
+                     f"{workouts.EXTRA_CAP})." if burn["extra"] else "")
+            gentle = f" It's a gentle day, so the goal is capped at {workouts.GENTLE_CAP}." if pick["gentle_day"] else ""
+            st.caption(f"Your daily calorie plan ({burn['target']:,} kcal) already includes a gentle deficit for steady loss. "
+                       f"The movement goal is a baseline of {burn['base']} kcal.{extra}{gentle} Burned calories ≈ MET × your "
+                       f"weight ({weight:g} kg) × time, with rests counted lightly. All numbers are estimates. "
+                       "The week matters far more than any single day.")
 
-    tab_workouts, tab_move, tab_week = st.tabs(["🏋️‍♀️ Workouts", "➕ Log a single move", "📅 My log"])
+    tab_today, tab_workouts, tab_move, tab_week = st.tabs(
+        ["✨ Today's workout", "⭐ Classic workouts", "➕ Log a single move", "📅 My log"])
+
+    with tab_today:
+        st.markdown("""<style>
+        .wk-part { font-size:.8rem; font-weight:800; letter-spacing:.08em; color:#9A90AE; text-transform:uppercase; margin:.6rem 0 .1rem; }
+        .st-key-wk_focus [role="radiogroup"] > label, .st-key-wk_time [role="radiogroup"] > label { padding:.55rem 1.1rem !important; }
+        </style>""", unsafe_allow_html=True)
+        focus_keys = ["pick"] + list(workouts.FOCUSES)
+        chosen = st.radio("Focus", focus_keys, horizontal=True, key="wk_focus", label_visibility="collapsed",
+                          format_func=lambda k: "✨ Tulsi's pick" if k == "pick" else workouts.FOCUSES[k][0])
+        time_keys = ["pick"] + workouts.TIME_CHOICES
+        chosen_time = st.radio("Time", time_keys, horizontal=True, key="wk_time", label_visibility="collapsed",
+                               format_func=lambda m: "⏱️ Tulsi decides" if m == "pick" else f"{m} min")
+        focus = pick["focus"] if chosen == "pick" else chosen
+        level = 1 if focus == "gentle" or pick["gentle_day"] else pick["level"]
+        minutes = (workouts.minutes_for(burn["left"], focus, level, weight, pick["gentle_day"]) if chosen_time == "pick"
+                   else int(chosen_time))
+        seed = st.session_state.setdefault("wk_seed", 0)
+        wk_key = f"{today_str}|{focus}|{level}|{minutes}|{seed}"
+        if st.session_state.get("wk_key") != wk_key:
+            st.session_state.wk_key = wk_key
+            st.session_state.wk_rows = workouts.build(focus, level, minutes, weight, seed)
+            st.session_state.wk_ver = st.session_state.get("wk_ver", 0) + 1
+        rows = st.session_state.wk_rows
+        ver = st.session_state.wk_ver
+
+        why = pick["why"] if chosen == "pick" else f"You chose {workouts.FOCUSES[focus][0].split(' ', 1)[1].lower()} today. Lovely."
+        if burn["left"] == 0:
+            why += " You've already reached today's movement goal, so this one is a bonus."
+        elif burn["extra"] and chosen_time == "pick":
+            why += " It's a little longer today, only if you feel like it. One day never undoes your progress."
+        real_minutes = sum(r["minutes"] for r in rows)
+        st.markdown(ui.card(f"{workouts.FOCUSES[focus][0]} · {workouts.LEVELS[level]} · about {real_minutes:.0f} min",
+                            ui.html.escape(why)), unsafe_allow_html=True)
+
+        b1, b2, _ = st.columns([2, 2, 3])
+        if b1.button("🔀 Give me a different workout", key="wk_new", use_container_width=True):
+            st.session_state.wk_seed = seed + 1
+            st.rerun()
+        b2.button("💬 Ask Tulsi about it", key="wk_ask", use_container_width=True, on_click=go_to_chat,
+                  args=("Here's my workout for today: " + ", ".join(f"{r['move']} {r['text']}" for r in rows)
+                        + ". Any tips to do it well, and what should I eat after?",))
+
+        ticks = []
+        last_part = None
+        for i, r in enumerate(rows):
+            if r["part"] != last_part:
+                st.markdown(f'<div class="wk-part">{r["part"]}</div>', unsafe_allow_html=True)
+                last_part = r["part"]
+            c1, c2, c3 = st.columns([1, 14, 2], vertical_alignment="center")
+            ticks.append(c1.checkbox("done", key=f"wk_tick_{ver}_{i}", label_visibility="collapsed"))
+            c2.markdown(f'<div class="meal" style="margin:0"><div class="i">{r["emoji"]}</div><div class="m">'
+                        f'<b>{ui.html.escape(r["move"])}: {r["text"]}</b><div>{ui.html.escape(r["tip"])}</div></div></div>',
+                        unsafe_allow_html=True)
+            if c3.button("🔀 Swap", key=f"wk_swap_{ver}_{i}", help="Swap for a similar move", use_container_width=True):
+                st.session_state.wk_swaps = st.session_state.get("wk_swaps", 0) + 1
+                st.session_state.wk_rows = workouts.swap(rows, i, focus, level, weight, st.session_state.wk_swaps)
+                st.session_state.wk_ver = ver + 1
+                st.rerun()
+        l1, l2 = st.columns(2)
+        log_ticked = l1.button("✅ Log the moves I ticked", type="primary", key="wk_log", use_container_width=True)
+        log_all = l2.button("🏆 I did the whole workout!", key="wk_all", use_container_width=True)
+        if log_ticked or log_all:
+            chosen_rows = list(range(len(rows))) if log_all else [i for i, t in enumerate(ticks) if t]
+            if chosen_rows:
+                workouts.log(today_str, rows, chosen_rows, focus)
+                st.session_state.wk_ver = ver + 1
+                st.toast("Logged! Your sun is brighter ☀️")
+                st.rerun()
+            else:
+                st.warning("Tick the moves you did first, or tap 'I did the whole workout'.")
+        st.caption("New workouts every day, built from 78 home moves. No equipment needed: just a chair, a stair "
+                   "and two water bottles for a few moves.")
 
     with tab_workouts:
-        pick_name, why = exercise.suggested_routine()
         names = list(exercise.ROUTINES)
-        st.markdown(ui.card(f"✨ Tulsi suggests today: {pick_name}", ui.html.escape(why)), unsafe_allow_html=True)
-        routine = st.radio("Workout", names, index=names.index(pick_name), horizontal=True, label_visibility="collapsed",
-                           key="routine_pick")
+        st.caption("Ready-made favourites, always the same, like the 15-min warm-up that started my journey.")
+        routine = st.radio("Workout", names, horizontal=True, label_visibility="collapsed", key="routine_pick")
         minutes_total, best_for, _ = exercise.ROUTINES[routine]
         rows = exercise.routine_breakdown(routine, weight)
-        st.caption(f"⏱️ About {minutes_total} min with short rests · 🔥 ~{sum(r['kcal'] for r in rows)} kcal for you · best for: {best_for}")
+        st.caption(f"⏱️ About {minutes_total} min with short rests · best for: {best_for.lower()}")
         with st.form(f"routine_{routine}", border=False):
             ticks = []
             for i, r in enumerate(rows):
                 c1, c2 = st.columns([1, 12], vertical_alignment="center")
                 ticks.append(c1.checkbox("done", key=f"rt_{routine}_{i}", label_visibility="collapsed"))
                 c2.markdown(f'<div class="meal" style="margin:0"><div class="i">{r["emoji"]}</div><div class="m">'
-                            f'<b>{r["move"]}: {r["text"]}</b><div>{ui.html.escape(r["tip"])}</div></div>'
-                            f'<div class="kc">~{r["kcal"]} kcal</div></div>', unsafe_allow_html=True)
+                            f'<b>{r["move"]}: {r["text"]}</b><div>{ui.html.escape(r["tip"])}</div></div></div>',
+                            unsafe_allow_html=True)
             b1, b2 = st.columns(2)
             log_ticked = b1.form_submit_button("✅ Log the moves I ticked", type="primary")
             log_all = b2.form_submit_button("🏆 I did the whole workout!")
@@ -810,14 +900,14 @@ elif page == "🔥 Exercise":
             chosen = list(range(len(rows))) if log_all else [i for i, t in enumerate(ticks) if t]
             if chosen:
                 burned = exercise.log_routine_moves(today_str, routine, chosen, profile)
-                st.toast(f"Logged! ~{burned} kcal burned 🔥 Your sun is brighter! (See 📅 My log)")
+                st.toast("Logged! Your sun is brighter ☀️")
                 st.rerun()
             else:
                 st.warning("Tick the moves you did first, or tap 'I did the whole workout'.")
         st.caption("💡 Planks and wall sits don't burn many calories, but they build the strength that helps you burn more every day.")
 
     with tab_move:
-        move_names = [m[0] for m in exercise.MOVES]
+        move_names = sorted(m[0] for m in exercise.MOVES)
         c1, c2, c3 = st.columns([3, 1, 2])
         mv = c1.selectbox("Move", move_names, format_func=lambda n: f"{exercise.MOVE[n][1]} {n}", key="mv_pick")
         unit = exercise.MOVE[mv][3]
@@ -825,23 +915,22 @@ elif page == "🔥 Exercise":
         label, default, step = {"reps": ("Reps per set", 12, 1), "sec": ("Seconds per set", 60, 5), "min": ("Minutes", 10, 1)}[unit]
         amount = c3.number_input(label, 1, 600, default, step, key=f"mv_amt_{unit}")
         st.caption(f"How to: {exercise.MOVE[mv][5]}")
-        est = exercise.move_kcal(mv, sets, amount, weight)
-        if st.button(f"➕ Log {exercise.amount_text(mv, sets, amount)} of {mv} (~{est} kcal)", type="primary", key="mv_add"):
+        if st.button(f"➕ Log {exercise.amount_text(mv, sets, amount)} of {mv}", type="primary", key="mv_add"):
             exercise.add_move(today_str, mv, sets, amount, profile)
-            st.toast(f"Logged {mv}! ~{est} kcal 🔥")
+            st.toast(f"Logged {mv}! Your sun is brighter ☀️")
             st.rerun()
         with st.expander("Did a walk, yoga class, Zumba or sport instead?"):
             names = [n for n, _, _ in exercise.EXERCISES]
             a1, a2 = st.columns([3, 2])
             pick = a1.selectbox("Activity", names, format_func=lambda n: f"{exercise.BY_NAME[n][0]} {n}", key="ex_pick")
             mins = a2.number_input("Minutes", 5, 300, 30, 5, key="ex_min")
-            est2 = exercise.kcal(exercise.BY_NAME[pick][1], weight, mins)
-            if st.button(f"➕ Add (~{est2} kcal)", key="ex_add"):
+            if st.button("➕ Add", key="ex_add"):
                 exercise.add(today_str, pick, mins, profile)
                 st.rerun()
         with st.expander("🎯 Change my daily burn goal"):
-            new_goal = st.number_input("Calories to burn from exercise each day", 50, 1500, goal, 25)
-            if new_goal != goal:
+            st.caption("Your baseline movement goal. Tulsi adds a little on days you eat more than your plan (capped).")
+            new_goal = st.number_input("Baseline calories to burn from exercise each day", 50, 1000, burn["base"], 25)
+            if new_goal != burn["base"]:
                 profile["burn_goal"] = int(new_goal)
                 storage.save_profile(profile)
                 st.rerun()
@@ -885,7 +974,7 @@ elif page == "🔥 Exercise":
 
 
 elif page == "🥗 Food & diet":
-    tab_plan, tab_scan = st.tabs(["📋 My meal plan", "📸 Scan a meal"])
+    tab_plan, tab_scan = st.tabs(["📋 My meal plan", "📸 Scan or type a meal"])
 
     with tab_plan:
         t = diet.target(profile)
@@ -951,17 +1040,33 @@ elif page == "🥗 Food & diet":
 
         left, right = st.columns([3, 2])
         with left:
-            source = st.radio("Photo", ["📁 Upload a photo", "📷 Use camera"], horizontal=True, label_visibility="collapsed")
-            photo = (st.file_uploader("Upload a meal photo", type=["jpg", "jpeg", "png", "webp"])
-                     if source.startswith("📁") else st.camera_input("Take a photo of your meal"))
-            note = st.text_input("Add a note for better accuracy (optional)",
-                                 placeholder="e.g. 2 chapatis, half cup dal, cooked in 1 tsp oil")
-            if photo and st.button("🔍 Scan my meal", type="primary"):
-                with st.spinner("Tulsi is looking at your food..."):
-                    try:
-                        st.session_state.scan = food.scan_meal(photo.getvalue(), note)
-                    except food.CoachError as err:
-                        show_error(err)
+            source = st.radio("How", ["📁 Upload a photo", "📷 Use camera", "✍️ Type what I ate"], horizontal=True,
+                              label_visibility="collapsed", key="food_source")
+            typed_meal, photo = "", None
+            if source.startswith("✍️"):
+                with st.form("type_meal", border=False):
+                    typed_meal = st.text_area("What did you eat?", height=110,
+                                              placeholder="e.g. 2 chapatis, 1 cup dal, cucumber salad and a glass of buttermilk")
+                    typed_go = st.form_submit_button("🔍 Work out my meal", type="primary")
+                if typed_go and typed_meal.strip():
+                    with st.spinner("Tulsi is working out your meal..."):
+                        try:
+                            st.session_state.scan = food.describe_meal(typed_meal)
+                        except food.CoachError as err:
+                            show_error(err)
+                elif typed_go:
+                    st.warning("Type what you ate first. Add rough amounts if you can, like '2 chapatis'.")
+            else:
+                photo = (st.file_uploader("Upload a meal photo", type=["jpg", "jpeg", "png", "webp"])
+                         if source.startswith("📁") else st.camera_input("Take a photo of your meal"))
+                note = st.text_input("Add a note for better accuracy (optional)",
+                                     placeholder="e.g. 2 chapatis, half cup dal, cooked in 1 tsp oil")
+                if photo and st.button("🔍 Scan my meal", type="primary"):
+                    with st.spinner("Tulsi is looking at your food..."):
+                        try:
+                            st.session_state.scan = food.scan_meal(photo.getvalue(), note)
+                        except food.CoachError as err:
+                            show_error(err)
         with right:
             if photo:
                 import base64
@@ -970,6 +1075,11 @@ elif page == "🥗 Food & diet":
                             'style="max-width:16rem;max-height:16rem;width:100%;object-fit:cover;border-radius:24px;'
                             'box-shadow:0 8px 22px rgba(78,42,132,.12)"><div style="color:#786E8C;font-size:.85rem;'
                             'margin-top:.4rem">Your meal</div></div>', unsafe_allow_html=True)
+            elif source.startswith("✍️"):
+                st.markdown(ui.card("✍️ No photo? No problem",
+                                    "List what you ate and roughly how much: \"2 idlis with sambar and coconut chutney\" or "
+                                    "\"a plate of chicken biryani and raita\". The more detail, the better the estimate."),
+                            unsafe_allow_html=True)
             else:
                 st.markdown(ui.card("🍛 Your meal photo will appear here",
                                     "Tip: take the photo from above in good light, with the whole plate visible."),
@@ -978,7 +1088,7 @@ elif page == "🥗 Food & diet":
         scan = st.session_state.get("scan")
         if scan:
             if not scan["items"]:
-                st.warning(scan["tip"] or "I couldn't find any food in this photo.")
+                st.warning(scan["tip"] or "I couldn't find any food there.")
             else:
                 st.markdown('<div class="section-label">What Tulsi found</div>', unsafe_allow_html=True)
                 summary = st.empty()   # filled in below, so it shows your corrections
@@ -1013,7 +1123,7 @@ elif page == "🥗 Food & diet":
                 if scan.get("tip"):
                     st.markdown(f'<div class="tip">💡 <b>Tulsi\'s tip:</b> {ui.html.escape(scan["tip"])}</div>',
                                 unsafe_allow_html=True)
-                st.caption(f"Estimates from a photo (confidence: {scan['confidence']}). They're a guide, not exact numbers.")
+                st.caption(f"Estimates (confidence: {scan['confidence']}). They're a guide, not exact numbers.")
                 if st.button(f"✅ Save to {meal_name}", type="primary"):
                     storage.add_meal(day, {"meal": meal_name, "items": [{k: v for k, v in i.items() if k != "warn"} for i in eaten],
                                            "calories": total})
@@ -1263,7 +1373,7 @@ elif page == "🌸 My garden":
     left, right = st.columns([1, 1])
     with left:
         g_glasses = storage.water_today(date.today().isoformat())
-        st.markdown(garden.tulsi_img(g["stage"], "16rem", fresh=g_glasses >= 8,
+        st.markdown(garden.tulsi_img(g["stage"], "16rem", flowers=g["old_flowers"], fresh=g_glasses >= 8,
                                      watering=st.session_state.pop("watered", False)), unsafe_allow_html=True)
         fresh_note = " Tulsi's leaves are sparkling! ✨" if g_glasses >= 8 else " Each glass you drink waters Tulsi too."
         st.markdown(ui.card(f"💧 Water today: {g_glasses} / 8 glasses",
@@ -1283,9 +1393,14 @@ elif page == "🌸 My garden":
             st.caption(f"{g['value']:.0f}% grown · {g['to_next']:.0f}% more until **{g['next']}**")
         goal = g["goal"]
         if goal["pct"] is not None:
-            st.markdown(ui.card(f"⚖️ {goal['start']:g} kg → {goal['current']:g} kg → goal {goal['goal']:g} kg",
-                                f"{goal['lost']:g} kg lost · {goal['pct']:.0f}% of the way there"),
+            journey_note = f"Journey {goal['journey']} · " if goal["journey"] > 1 else ""
+            st.markdown(ui.card(f"⚖️ {journey_note}{goal['start']:g} kg → {goal['current']:g} kg → goal {goal['goal']:g} kg",
+                                f"{goal['lost']:g} kg lost on this journey · {goal['pct']:.0f}% of the way there"
+                                + (f" · {goal['lost_total']:g} kg lost in total" if goal["journey"] > 1 else "")),
                         unsafe_allow_html=True)
+            if g["flowers"]:
+                st.markdown(ui.card(f"🌸 {g['flowers']} flower{'s' if g['flowers'] > 1 else ''} on Tulsi",
+                                    "One for every goal you've reached. They stay forever."), unsafe_allow_html=True)
         else:
             st.info("Add your **starting weight** and **goal weight** in 🩺 Health profile so Tulsi can grow "
                     "with your journey.")
@@ -1300,7 +1415,7 @@ elif page == "🌸 My garden":
     show_win = s2.toggle("Show my latest win", value=True)
     card_png = cards.share_card(profile, show_weight=show_weight, show_win=show_win)
     with s3:
-        st.download_button("⬇️ Download my share card", card_png, file_name="my_fitbuddy_progress.png",
+        st.download_button("⬇️ Download my share card", card_png, file_name="my_tulsi_progress.png",
                            mime="image/png", type="primary")
     with st.expander("👀 Preview my card"):
         st.image(card_png, width=360)
@@ -1440,7 +1555,7 @@ else:
             "- When you talk to the coach, your profile and this week's check-ins are sent to the "
             "AI so it can personalise advice. Nothing else is shared.\n"
             "- You can delete your profile at any time at the bottom of this page.\n"
-            "- FitBuddy is not a doctor and will never advise on medication."
+            "- Tulsi is not a doctor and will never advise on medication."
         )
 
     with st.form("profile"):
@@ -1493,7 +1608,11 @@ else:
                 "diet": diet, "allergies": allergies, "goals": goals, "notes": notes,
             })
             storage.save_profile(profile)
-            st.success("Profile saved! Your coach will now use it. 🌱")
+            logged = journey.weights(journey.all_days())
+            if current_weight_kg and (not logged or abs(logged[-1][1] - current_weight_kg) > 0.05):
+                storage.add_weight(date.today().isoformat(), current_weight_kg)  # so the garden and charts see it
+            st.toast("Profile saved! Your coach will now use it. 🌱")
+            st.rerun()
 
     st.download_button("🩺 Download a health summary for my doctor (PDF)", cards.doctor_report(profile),
                        file_name=f"health_summary_{date.today().isoformat()}.pdf", mime="application/pdf",

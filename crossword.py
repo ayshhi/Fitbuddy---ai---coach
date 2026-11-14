@@ -71,7 +71,7 @@ THEMES = {
     },
     "🩺 Body & PCOS": {
         "HEART": "It pumps blood around your body", "BRAIN": "Your thinking organ",
-        "CYCLE": "Menstrual ___, which you can track in FitBuddy", "OVARY": "Where eggs are stored",
+        "CYCLE": "Menstrual ___, which you can track with Tulsi", "OVARY": "Where eggs are stored",
         "INSULIN": "Hormone that helps your body use sugar", "HORMONE": "Chemical messenger in your body",
         "PERIOD": "Monthly bleed", "FIBRE": "Found in veggies, it helps digestion", "PROTEIN": "Builds muscle: eggs, dal, paneer",
         "IRON": "Mineral in spinach and dates that helps your blood", "VITAMIN": "D is one you get from sunlight",
@@ -294,4 +294,4 @@ def grid_html(st_: dict) -> str:
 
 def share_text(st_: dict, title: str) -> str:
     hints = f"{st_['hints']} hint{'s' if st_['hints'] != 1 else ''}" if st_["hints"] else "no hints"
-    return f"🌿 {title} solved! ✅\n{len(st_['entries'])} words, {hints}\nCome solve one in FitBuddy!"
+    return f"🌿 {title} solved! ✅\n{len(st_['entries'])} words, {hints}\nCome solve one with Tulsi!"

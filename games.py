@@ -117,7 +117,7 @@ def bingo_lines(done: set[int]) -> int:
 def bingo_share(name: str, done: set[int]) -> str:
     rows = ["".join("🟪" if r * 5 + c in done else "⬜" for c in range(5)) for r in range(5)]
     lines = bingo_lines(done)
-    head = f"🎯 FitBuddy Wellness Bingo {week_key()}: {len(done)}/25 squares, {lines} bingo{'s' if lines != 1 else ''}!"
+    head = f"🎯 Tulsi Wellness Bingo {week_key()}: {len(done)}/25 squares, {lines} bingo{'s' if lines != 1 else ''}!"
     return head + "\n" + "\n".join(rows) + f"\nPlaying with Tulsi 🌿 Want to join {name or 'me'} this week?"
 
 

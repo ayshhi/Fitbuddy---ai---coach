@@ -1,5 +1,5 @@
 """
-ui.py - the look and feel of FitBuddy: colours, chat bubbles and Tulsi, the coach character.
+ui.py - the look and feel of the Tulsi app: colours, chat bubbles and Tulsi, the coach character.
 """
 
 import base64
@@ -151,8 +151,8 @@ def inject_css() -> None:
 
 def sidebar_brand() -> None:
     st.sidebar.markdown(
-        f'<div class="fb-brand"><img src="{AVATAR}"><div><b>FitBuddy</b>'
-        f'<span>with {COACH_NAME}, your judgement-free coach</span></div></div>',
+        f'<div class="fb-brand"><img src="{AVATAR}"><div><b>{COACH_NAME}</b>'
+        f'<span>your kind, judgement-free health coach</span></div></div>',
         unsafe_allow_html=True,
     )
 

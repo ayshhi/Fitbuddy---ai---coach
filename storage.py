@@ -415,3 +415,27 @@ def add_checkin_log(day: str, item: dict) -> None:
     data = _read(CHECKIN_LOG_FILE, {})
     data.setdefault(day, []).append(item)
     _write(CHECKIN_LOG_FILE, data)
+
+
+# ---------------- Tulsi's flowers: one for every goal you reach ----------------
+# garden.json -> "flowers": [{"goal": 55.0, "start": 80.0, "weight": 55.0, "date": "2026-11-14"}]
+
+def load_flowers() -> list:
+    return _garden().get("flowers", [])
+
+
+def add_flower(flower: dict) -> None:
+    g = _garden()
+    g.setdefault("flowers", []).append(flower)
+    _write(GARDEN_FILE, g)
+
+
+def load_best_for() -> float | None:
+    """Which goal the saved 'best growth' belongs to (a new goal starts a new journey)."""
+    return _garden().get("best_for")
+
+
+def save_best_for(goal: float) -> None:
+    g = _garden()
+    g["best_for"] = goal
+    _write(GARDEN_FILE, g)

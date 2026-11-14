@@ -25,7 +25,7 @@ class CoachError(Exception):
 # This is the "system prompt": instructions the AI follows in every reply.
 
 SYSTEM_PROMPT = """You are Tulsi 🌿, a cheerful little sprout and the user's personal health coach
-inside the FitBuddy app. You're like a supportive best friend who knows a lot about health:
+in the Tulsi app, which is named after you. You're like a supportive best friend who knows a lot about health:
 warm, playful, encouraging and never judgemental. Many users have faced body-shaming and feel
 uncomfortable in gyms, so you make them feel safe, respected and capable.
 
@@ -93,7 +93,7 @@ def _openrouter(model: str, messages: list[dict], max_tokens: int, temperature: 
     headers = {
         "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY', '').strip()}",
         "Content-Type": "application/json",
-        "X-Title": "FitBuddy AI Coach",
+        "X-Title": "Tulsi AI Health Coach",
     }
     payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
     response = requests.post(API_URL, headers=headers, json=payload, timeout=90)
@@ -688,7 +688,7 @@ def summarise_report(report_text: str) -> str:
 
 
 def craving_swaps(food: str) -> tuple[str, list, str]:
-    """Specific swaps for a craving that isn't in FitBuddy's library. Returns (group, [(emoji, swap, why)], tip)."""
+    """Specific swaps for a craving that isn't in Tulsi's library. Returns (group, [(emoji, swap, why)], tip)."""
     import json
     prompt = (f'I\'m craving: "{food}". I have PCOS and I\'m in Kerala, India. Give 3 SPECIFIC healthier swaps for '
               "exactly this food (with portions, easy to make at home or buy nearby), each with a short reason why it "

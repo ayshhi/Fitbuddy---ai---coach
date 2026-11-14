@@ -45,15 +45,26 @@ def weights(rows: dict) -> list[tuple[str, float]]:
 # ---------------- Goal progress ----------------
 
 def goal_progress(profile: dict, rows: dict) -> dict:
+    """Progress towards the current goal. After you reach a goal and set a new one, the new journey starts
+    from the weight you were at when you reached the last one."""
     w = weights(rows)
     start = float(profile.get("start_weight_kg") or (w[0][1] if w else 0) or 0)
     current = float(w[-1][1] if w else profile.get("current_weight_kg") or 0)
     goal = float(profile.get("goal_weight_kg") or 0)
+    flowers = storage.load_flowers()
+    journey_no = 1
+    if flowers and goal and abs(float(flowers[-1]["goal"]) - goal) > 0.05:
+        start = float(flowers[-1].get("weight") or flowers[-1]["goal"])  # a new goal: a new journey
+        journey_no = len(flowers) + 1
+    elif flowers:
+        journey_no = len(flowers)
     pct = None
     if start and current and goal and start != goal:
         pct = max(0.0, min(100.0, (start - current) / (start - goal) * 100))
-    return {"start": start, "current": current, "goal": goal, "pct": pct,
-            "lost": round(start - current, 1) if start and current else 0}
+    first_start = float(profile.get("start_weight_kg") or start or 0)
+    return {"start": start, "current": current, "goal": goal, "pct": pct, "journey": journey_no,
+            "lost": round(start - current, 1) if start and current else 0,
+            "lost_total": round(first_start - current, 1) if first_start and current else 0}
 
 
 # ---------------- Tulsi's growth ----------------
@@ -83,19 +94,45 @@ def consistency_points(rows: dict) -> int:
 def growth(profile: dict, rows: dict | None = None) -> dict:
     rows = rows if rows is not None else all_days()
     goal = goal_progress(profile, rows)
+    reached = (goal["pct"] or 0) >= 100
+    new_flower = False
+    flowers = storage.load_flowers()
+    if reached and not any(abs(float(f["goal"]) - goal["goal"]) < 0.05 for f in flowers):
+        storage.add_flower({"goal": goal["goal"], "start": goal["start"], "weight": goal["current"],
+                            "date": date.today().isoformat()})
+        flowers = storage.load_flowers()
+        new_flower = True
+
     effort_bonus = min(25.0, consistency_points(rows) / 8)  # up to 25% growth from effort alone
     value = (goal["pct"] or 0) + effort_bonus
-    value = 100.0 if (goal["pct"] or 0) >= 100 else min(value, 95.0)  # only the goal makes her bloom
+    value = 100.0 if reached else min(value, 95.0)  # only the goal makes her bloom
 
-    best = max(value, storage.load_best_growth())  # Tulsi never shrinks
+    # Tulsi never shrinks within a journey. A new goal starts a new journey, but her flowers stay,
+    # and she never drops below a leafy plant once she has bloomed.
+    if storage.load_best_for() != goal["goal"]:
+        storage.save_best_for(goal["goal"])
+        storage.save_best_growth(value)
+    best = max(value, storage.load_best_growth())
     if best > storage.load_best_growth():
         storage.save_best_growth(best)
 
     index = max(i for i, s in enumerate(STAGES) if best >= s[0])
+    if flowers:
+        index = max(index, 3)
     nxt = STAGES[index + 1] if index + 1 < len(STAGES) else None
+    old_flowers = len(flowers) - (1 if reached else 0)  # flowers from earlier goals, drawn on her leaves
+    message = STAGES[index][3]
+    if reached and len(flowers) > 1:
+        message = f"Full bloom again! That's {len(flowers)} goals reached, and a flower for each one. 💜"
+    elif reached:
+        message += " Set a new goal in Health profile, and Tulsi will grow another flower when you reach it."
+    elif flowers:
+        message = (f"Tulsi keeps her {len(flowers)} flower{'s' if len(flowers) > 1 else ''} from the goals you've reached, "
+                   "and she's growing a new one for your next goal.")
     return {"value": round(best, 1), "stage": index, "name": STAGES[index][1], "emoji": STAGES[index][2],
-            "message": STAGES[index][3], "next": nxt[1] if nxt else None,
-            "to_next": round(nxt[0] - best, 1) if nxt else 0, "goal": goal}
+            "message": message, "next": nxt[1] if nxt else None,
+            "to_next": round(nxt[0] - best, 1) if nxt else 0, "goal": goal,
+            "flowers": len(flowers), "old_flowers": old_flowers, "new_flower": new_flower}
 
 
 # ---------------- Menstrual cycle ----------------

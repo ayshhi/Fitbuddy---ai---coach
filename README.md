@@ -1,8 +1,9 @@
-# FitBuddy
+# Tulsi
 
-**A kind, judgement-free AI health coach for women with PCOS, built around a character called Tulsi.**
+**A kind, judgement-free AI health coach for women with PCOS.**
 
-FitBuddy helps you lose weight and build healthy habits at home, with no gym, no shaming and no extreme diets.
+Tulsi is named after the holy basil plant, a symbol of healing and care in Indian homes, and the app's coach is
+a little tulsi sprout who grows with you. Tulsi helps you lose weight and build healthy habits at home, with no gym, no shaming and no extreme diets.
 It plans specific workouts and meals, reads your food photos, tracks your cycle, and adjusts its advice to your
 sleep, stress and cycle phase.
 
@@ -16,7 +17,7 @@ skipping rope), **more cardio in the evening**, along with strength moves like p
 with a calorie deficit. Together, they helped me lose weight I once thought was impossible to lose.
 
 I also know what it feels like to be body-shamed, and how stress and poor sleep raise cortisol and make weight
-harder to lose. Most fitness apps ignore all of that. FitBuddy is the coach I wish I'd had: specific, encouraging,
+harder to lose. Most fitness apps ignore all of that. Tulsi is the coach I wish I'd had: specific, encouraging,
 and aware of PCOS.
 
 ### Where the idea came from
@@ -28,7 +29,7 @@ which exercises wouldn't spike my cortisol, and how big my calorie deficit shoul
 I achieved something I thought was impossible.
 
 But I had to do it all by hand: typing out every meal, asking the same questions again, and keeping track of
-everything myself. FitBuddy turns that daily routine into an app. It remembers my profile, cycle and progress,
+everything myself. Tulsi turns that daily routine into an app. It remembers my profile, cycle and progress,
 plans my workouts and meals, and gives the same kind, specific help, without starting from scratch every day.
 
 ![Today page](screenshots/today.png)
@@ -54,18 +55,23 @@ The daily home base, split into two halves.
 
 ![Exercise page](screenshots/exercise.png)
 
-- **Six ready-made home workouts with exact sets and reps**: a 15-minute fat-burn warm-up (jumping jacks 2 × 45 sec,
-  high knees 2 × 30 sec, squat jumps 3 × 10, mountain climbers 3 × 30 sec, 3 min skipping rope), lower-body strength,
-  core and plank, HIIT, full-body beginner, and a gentle period-friendly session.
-- Every move has a short how-to and an **estimated calorie burn for your body weight**.
-- Tick the moves you finished, or log a single move (for example *Plank, 3 × 60 sec* or *Lunges, 3 × 12*).
-- Tulsi **suggests a workout for today** based on your cycle phase, sleep, stress and energy.
-- A sun gets brighter as you approach your daily burn goal, and a log shows today and the past week.
-  Walks recorded by Samsung Health are included automatically.
+- **A fresh workout every day, built from 78 home moves.** Each move is tagged by focus (legs and glutes, core,
+  cardio, arms, gentle and stretching) and level. A workout has a warm-up, main moves with exact sets and reps, and a
+  cool-down. Tap **Give me a different workout** for a new one, or **Swap** any single move for a similar one.
+- **Tulsi picks the focus and level for your day** from your cycle phase, sleep, stress, energy and what you trained
+  yesterday, and explains why: gentle on period or high-stress days, steady strength before your period, harder
+  workouts when your energy is highest. You can also choose the focus and length yourself.
+- **The length comes from a quiet daily goal.** Your calorie plan already includes a gentle deficit. The movement goal
+  is a baseline (150 kcal), plus a little more if you've eaten above your plan that day, capped at 150 extra and lower
+  on gentle days. It never asks you to "burn off" food.
+- **Calories stay in the background.** The page shows a sun that gets brighter as you move, not numbers.
+  The maths (eaten, burned, goal) is one tap away under **See the numbers**.
+- **Classic workouts** like the 15-minute fat-burn warm-up that started my journey are always there, and you can log
+  a single move (for example *Plank, 3 × 60 sec*).
 
 **How calories are estimated:** calories ≈ MET × weight (kg) × time (hours), using standard MET values for each move.
-Rest between sets is counted at a light MET of 3, so totals stay realistic (the 15-minute warm-up is about 97 kcal
-at 63 kg). These are estimates, and the app says so.
+Rest between sets is counted at a light MET of 3, so totals stay realistic. AI decides what fits your day; plain code
+builds the workout and does the maths, so numbers are calculated, never guessed.
 
 ### Food & diet (meal plan and food scan)
 
@@ -79,8 +85,8 @@ at 63 kg). These are estimates, and the app says so.
 - **Swap** any meal, and tap **I ate this** to log it. A progress bar shows eaten vs target, and the app suggests
   easy protein add-ons when the plan is low.
 
-**Food scan**
-- Take or upload a photo of your meal. Gemini identifies each food (including Kerala dishes) and estimates calories,
+**Food scan, or type it in**
+- Take or upload a photo of your meal, or just type what you ate ("2 chapatis, 1 cup dal, salad") if you don't have a photo. Gemini identifies each food (including Kerala dishes) and estimates calories,
   protein, carbs, fat and fibre.
 - Adjust the servings you actually ate and edit anything before saving.
 - A sanity check flags results where the calories don't match the protein, carbs and fat
@@ -115,6 +121,7 @@ at 63 kg). These are estimates, and the app says so.
 - **Progress**: imports a Samsung Health export (CSV or .zip) and charts steps, walks, sleep and weight. The weight
   chart shows a 7-day average, and when the scale goes up, the app explains likely temporary causes from your own data.
 - **My garden**: Tulsi grows from a seed to full bloom as you progress and make an effort. She never wilts.
+  Every goal you reach gives her a flower that stays forever; set a new goal and she grows towards the next one.
   Each glass of water you log waters her. Includes badges, a non-scale wins journal and a shareable progress card.
 - **Wellness Bingo and Crosswords**: a weekly self-care bingo card and newspaper-style crosswords (daily, by theme,
   or on any theme you type) to share with friends.
@@ -162,4 +169,4 @@ In `.env`, paste your free API keys from [OpenRouter](https://openrouter.ai/keys
 
 The development story, step by step, is in [DEVLOG.md](DEVLOG.md).
 
-*FitBuddy gives general wellness support, not medical advice. Always talk to your doctor about medical questions.*
+*Tulsi gives general wellness support, not medical advice. Always talk to your doctor about medical questions.*

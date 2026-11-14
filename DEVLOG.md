@@ -1,6 +1,6 @@
-# FitBuddy development log
+# Tulsi development log
 
-This is how FitBuddy was built, step by step, including the problems I hit and how I solved them.
+This is how Tulsi (first called FitBuddy) was built, step by step, including the problems I hit and how I solved them.
 I built it individually, with **Claude** as my AI building partner for planning, code, design and debugging.
 
 Most of the first version was built in one intensive day, **13 November 2026**, before my first commit.
@@ -160,7 +160,7 @@ After an honest review, some features were too surface-level, so I improved them
 
 ## Step 12 (14 Nov): Making it something I'd actually use every day
 
-I slept on it and asked myself what would stop me using FitBuddy for months, not just for a demo:
+I slept on it and asked myself what would stop me using the app for months, not just for a demo:
 
 - **Logging was a chore** → **"Just tell Tulsi"**: I describe my day in one sentence (or say it), the AI turns it into
   structured data, and I confirm. It never guesses things I didn't say, and keeps my Samsung data for anything I didn't mention.
@@ -263,6 +263,31 @@ squats, and I ate a **proper planned diet**. So I made both specific:
   timeline. The plan is three cards: Exercise and Eat open their pages, Rest is a reminder, and ✅ marks each done.
   Two buttons make a plan for today or for tomorrow (with specific moves and meals, in that order).
 - Water moved to My garden, the cycle card moved to My cycle, and period dates left the Health profile page.
+
+## Step 18 (14 Nov): Workouts built fresh every day
+
+Six fixed workouts got repetitive, and there are thousands of home exercises. But if the AI invents a workout, it also
+guesses the calories. So I split the job:
+- A **library of 78 moves**, each with a MET value, how-to, focus tags and a level (gentle, beginner, intermediate).
+- **Tulsi picks the focus and level** from my cycle phase, sleep, stress, energy and yesterday's focus (so muscles rest).
+- **Code builds the workout** (warm-up, main moves filling the time, cool-down) and calculates calories. A new seed
+  gives a different workout; Swap replaces one move with a similar one that isn't already in it.
+- The **length** comes from a quiet goal: 150 kcal baseline, plus what I ate above my plan, capped at +150, and at most
+  120 on gentle days. I checked that eating 600 kcal over the plan adds only 150, so it never turns into punishment.
+- Calories moved out of sight: the sun and a percentage on the page, the numbers under "See the numbers".
+- **Type a meal instead of scanning:** no photo? Type what you ate ("2 idlis with sambar"). The AI estimates each food
+  with the same format as a photo scan, so the same food cards, fix-it table and Save button work for both.
+
+## Step 19 (14 Nov): Renamed to Tulsi
+
+The app is now called **Tulsi**, after the holy basil plant that stands for healing and care in Indian homes, and
+after the little sprout coach who was always the heart of it. "FitBuddy" sounded like any fitness app; Tulsi says
+what it's really about.
+
+**A flower for every goal.** I reached my goal weight, but Tulsi didn't bloom. The bug: changing "Current weight" in
+the profile didn't add it to the weight log, and the garden reads the log. Now saving the profile logs it. I also made
+reaching a goal mean more: each goal reached adds a permanent flower, and a new goal starts a new journey from the
+weight where the last one ended. Tulsi stays at least a leafy plant once she has bloomed, so she never "goes back".
 
 ---
 

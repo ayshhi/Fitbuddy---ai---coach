@@ -65,6 +65,16 @@ def _flower(cx, cy, open_=True):
     return petals + f'<circle cx="{cx}" cy="{cy}" r="10" fill="#F7C548"/><circle cx="{cx - 3}" cy="{cy - 3}" r="3" fill="#FBE29A"/>' + sparkles
 
 
+def _small_flower(cx, cy):
+    """A small flower on a leaf: one for every goal reached before the current one."""
+    petals = "".join(f'<ellipse cx="{cx}" cy="{cy - 7}" rx="4.5" ry="8" fill="{c}" transform="rotate({a} {cx} {cy})"/>'
+                     for a, c in zip(range(0, 360, 72), ["#E58FC7", "#C38BEA", "#E58FC7", "#C38BEA", "#F2A7D3"]))
+    return petals + f'<circle cx="{cx}" cy="{cy}" r="4.5" fill="#F7C548"/>'
+
+
+FLOWER_SPOTS = [(68, 110), (132, 96), (72, 88), (128, 74), (70, 128), (130, 118), (76, 66), (124, 58)]
+
+
 DEW = "".join(
     f'<path d="M{x} {y - 8} C{x + 5.5} {y} {x + 5.5} {y + 5} {x} {y + 6} C{x - 5.5} {y + 5} {x - 5.5} {y} {x} {y - 8}Z" '
     f'fill="#7CC4F5" stroke="#FFFFFF" stroke-width="1"/>'
@@ -72,7 +82,7 @@ DEW = "".join(
 )
 
 
-def tulsi_svg(stage: int, fresh: bool = False) -> str:
+def tulsi_svg(stage: int, fresh: bool = False, flowers: int = 0) -> str:
     """fresh=True adds shiny water drops (after you've had 8 glasses today)."""
     stage = max(0, min(5, int(stage)))
     parts = [POT]
@@ -100,6 +110,8 @@ def tulsi_svg(stage: int, fresh: bool = False) -> str:
             parts.append(_flower(100, top - 6, open_=False))
         if stage == 5:
             parts.append(_flower(100, top - 8, open_=True))
+        for x, y in FLOWER_SPOTS[:max(0, flowers)]:
+            parts.append(_small_flower(x, y))
         parts.append(_body())
     if fresh:
         parts.append(DEW)
@@ -131,8 +143,8 @@ WATER_CSS = """<style>
 </style>"""
 
 
-def tulsi_img(stage: int, size: str = "12rem", fresh: bool = False, watering: bool = False) -> str:
-    data = base64.b64encode(tulsi_svg(stage, fresh).encode()).decode()
+def tulsi_img(stage: int, size: str = "12rem", fresh: bool = False, watering: bool = False, flowers: int = 0) -> str:
+    data = base64.b64encode(tulsi_svg(stage, fresh, flowers).encode()).decode()
     img = f'<img src="data:image/svg+xml;base64,{data}" style="width:100%;height:auto;display:block">'
     if not watering:
         return f'<div class="tulsi-pot" style="width:{size}">{img}</div>'

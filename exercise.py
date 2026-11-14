@@ -48,6 +48,100 @@ MOVES = [
     ("Child's pose", "🧘‍♀️", 2.0, "sec", 0, "Kneel, sit back on your heels, stretch your arms forward and breathe."),
     ("Spot jogging", "🏃‍♀️", 7.0, "min", 0, "Light jog on the spot."),
 ]
+# More moves, so workouts can be built fresh every day. (name, emoji, MET, unit, seconds per rep, how-to)
+MOVES += [
+    # legs & glutes
+    ("Sumo squats", "🏋️‍♀️", 5.0, "reps", 3, "Feet wide, toes turned out, sit down between your heels, squeeze glutes as you stand."),
+    ("Reverse lunges", "🦵", 4.0, "reps", 3, "Step one foot back, lower both knees, push through the front heel to stand. Count both legs."),
+    ("Curtsy lunges", "🦵", 4.0, "reps", 3, "Step one leg behind and across, like a curtsy, bend both knees, come back up. Count both legs."),
+    ("Step-ups (on a stair)", "🪜", 6.0, "reps", 2.5, "Step up onto a stair with one foot, bring the other up, step down. Count both legs."),
+    ("Calf raises", "🦶", 2.8, "reps", 2, "Stand tall, rise up onto your toes, lower slowly. Hold a wall for balance."),
+    ("Donkey kicks", "🐴", 3.0, "reps", 2, "On hands and knees, kick one bent leg up towards the ceiling, lower. Count both legs."),
+    ("Fire hydrants", "🐕", 3.0, "reps", 2, "On hands and knees, lift one bent knee out to the side, lower. Count both legs."),
+    ("Single-leg glute bridge", "🍑", 3.5, "reps", 3, "Like a glute bridge with one leg straight in the air. Count both legs."),
+    ("Pulse squats", "🏋️‍♀️", 5.0, "sec", 0, "Stay low in a squat and pulse up and down a few centimetres."),
+    ("Squat hold", "🧱", 4.0, "sec", 0, "Sit into a squat and hold it, chest up, weight in your heels."),
+    ("Clamshells", "🐚", 2.8, "reps", 2, "Lie on your side, knees bent, open the top knee like a shell, close. Count both sides."),
+    ("Side-lying leg raises", "🦵", 2.8, "reps", 2, "Lie on your side, lift the top leg straight up, lower slowly. Count both sides."),
+    ("Good mornings", "🙇‍♀️", 3.5, "reps", 3, "Hands behind your head, hinge forward at the hips with a flat back, stand up."),
+    ("Jump lunges", "⚡", 8.0, "reps", 2.5, "From a lunge, jump and switch legs in the air, land softly. Count both legs."),
+    ("Skater hops", "⛸️", 7.5, "sec", 0, "Hop side to side from one foot to the other, like a speed skater."),
+    # core
+    ("Dead bug", "🪲", 3.0, "reps", 2.5, "On your back, arms up, knees bent; lower opposite arm and leg, back pressed down. Count both sides."),
+    ("Bird dog", "🐦", 2.8, "reps", 3, "On hands and knees, stretch one arm forward and the opposite leg back, hold, switch."),
+    ("Side plank", "📐", 3.5, "sec", 0, "On one forearm, body in a straight line, hips lifted. Knees down to make it easier."),
+    ("Russian twists", "🌀", 3.8, "reps", 1.5, "Sit leaning back slightly, feet down or up, turn your shoulders side to side. Count both sides."),
+    ("Flutter kicks", "🦵", 3.8, "sec", 0, "Lie on your back, legs straight and slightly lifted, kick them up and down in small moves."),
+    ("Plank shoulder taps", "🫳", 4.0, "reps", 1.5, "In a high plank, tap one shoulder with the opposite hand, keep hips still. Count both sides."),
+    ("Heel taps", "👣", 3.0, "reps", 1.5, "Lie with knees bent, shoulders lifted, reach side to side to tap your heels."),
+    ("Reverse crunches", "🌀", 3.8, "reps", 2.5, "Lie on your back, knees bent up, curl your hips off the floor towards your chest."),
+    ("Hollow hold", "🍌", 3.8, "sec", 0, "On your back, lift shoulders and legs a little, lower back pressed into the floor, hold."),
+    ("V-ups", "✌️", 4.5, "reps", 3, "Lie flat, lift arms and legs together to meet in a V, lower slowly."),
+    ("Toe touches", "🙌", 3.5, "reps", 2, "Lie with legs straight up, reach your hands up towards your toes."),
+    ("Seated knee tucks", "🪑", 3.8, "reps", 2.5, "Sit leaning back on your hands, pull your knees in to your chest, stretch them out."),
+    # cardio
+    ("Fast feet", "👟", 8.0, "sec", 0, "Slightly squatted, run on the spot with tiny, very fast steps."),
+    ("Squat jacks", "⭐", 8.0, "sec", 0, "Jump your feet out into a squat, then jump them back together."),
+    ("Star jumps", "🌟", 8.0, "reps", 2, "Squat, then jump up spreading arms and legs into a star, land softly."),
+    ("Shadow boxing", "🥊", 5.5, "sec", 0, "Light on your feet, punch the air: jab, cross, hooks. Keep your guard up."),
+    ("Step jacks (low impact)", "⭐", 4.5, "sec", 0, "Like jumping jacks but step one foot out at a time, arms overhead. No jumping."),
+    ("Side-to-side shuffle", "↔️", 7.0, "sec", 0, "Shuffle quickly a few steps to one side, then back, staying low."),
+    ("Tuck jumps", "🦘", 8.0, "reps", 2.5, "Jump up and bring your knees towards your chest, land softly."),
+    ("Dance cardio", "💃", 5.5, "min", 0, "Put on a favourite song and dance non-stop. It all counts!"),
+    ("Standing knee drives", "🦵", 4.5, "sec", 0, "Drive one knee up while pulling your arms down, switch fast. Low impact."),
+    # arms & upper body
+    ("Wall push-ups", "🧱", 3.0, "reps", 2.5, "Hands on a wall, step back, bend your elbows to bring your chest to the wall, push away."),
+    ("Incline push-ups (on a chair)", "🪑", 3.5, "reps", 2.5, "Hands on a sturdy chair or bed edge, body straight, lower your chest and push up."),
+    ("Push-ups", "💪", 4.5, "reps", 2.5, "Hands under shoulders, body straight from head to heels, lower and push up."),
+    ("Chair tricep dips", "🪑", 3.8, "reps", 2.5, "Hands on the edge of a sturdy chair behind you, bend your elbows to lower, push up."),
+    ("Plank to downward dog", "🐕", 3.8, "reps", 3, "From a high plank, push your hips up and back into a V, return to plank."),
+    ("Plank up-downs", "🧱", 5.0, "reps", 4, "From a forearm plank, push up to hands one arm at a time, then back down."),
+    ("Arm pulses", "🙆‍♀️", 2.8, "sec", 0, "Arms straight out to the sides, pulse them up and down in small moves."),
+    ("Bottle shoulder press", "🍼", 3.5, "reps", 2.5, "Hold a water bottle in each hand at your shoulders, press them overhead, lower."),
+    ("Bottle bicep curls", "🍼", 3.0, "reps", 2.5, "Water bottle in each hand, elbows by your sides, curl up to your shoulders, lower."),
+    # gentle & stretching
+    ("Neck rolls", "🙂", 2.0, "sec", 0, "Slowly roll your head in a half circle, side to side. Never force it."),
+    ("Shoulder rolls", "🔄", 2.0, "sec", 0, "Roll your shoulders up, back and down in big, slow circles."),
+    ("Hip circles", "⭕", 2.5, "sec", 0, "Hands on hips, draw big slow circles with your hips, both directions."),
+    ("Standing side stretch", "🌿", 2.3, "sec", 0, "Reach one arm overhead and lean gently to the side, switch."),
+    ("Hamstring stretch", "🦵", 2.3, "sec", 0, "Sit with one leg straight, reach gently towards your toes, switch."),
+    ("Butterfly stretch", "🦋", 2.3, "sec", 0, "Sit with the soles of your feet together, let your knees drop open, breathe."),
+    ("Cobra stretch", "🐍", 2.3, "sec", 0, "Lie face down, hands under shoulders, gently lift your chest, hips stay down."),
+    ("Knee-to-chest stretch", "🤗", 2.3, "sec", 0, "Lie on your back, hug one or both knees to your chest and breathe."),
+    ("Torso twists", "🌀", 2.8, "sec", 0, "Stand tall, arms loose, twist gently side to side."),
+    ("Deep breathing", "🌬️", 1.5, "min", 0, "Breathe in for 4, hold for 4, out for 6. Calms cortisol."),
+]
+# What each move trains and how hard it is: (focus areas, level 1 = gentle, 2 = beginner, 3 = intermediate)
+TAGS = {
+    "Plank": ({"core"}, 2), "Squats": ({"legs"}, 2), "Lunges": ({"legs"}, 2), "Side lunges": ({"legs"}, 2),
+    "Squat jumps": ({"legs", "cardio"}, 3), "Mountain climbers": ({"cardio", "core"}, 3), "Jumping jacks": ({"cardio"}, 2),
+    "Skipping rope": ({"cardio"}, 2), "High knees": ({"cardio"}, 2), "Butt kicks": ({"cardio"}, 2),
+    "Burpees": ({"cardio", "full"}, 3), "Push-ups (on knees)": ({"upper"}, 2), "Glute bridges": ({"legs"}, 1),
+    "Wall sit": ({"legs"}, 2), "Crunches": ({"core"}, 2), "Bicycle crunches": ({"core"}, 2), "Leg raises": ({"core"}, 2),
+    "Superman": ({"core", "upper"}, 1), "March in place": ({"warmup", "cardio"}, 1), "Arm circles": ({"warmup", "upper"}, 1),
+    "Cat-cow stretch": ({"gentle", "cooldown"}, 1), "Child's pose": ({"gentle", "cooldown"}, 1), "Spot jogging": ({"cardio", "warmup"}, 2),
+    "Sumo squats": ({"legs"}, 2), "Reverse lunges": ({"legs"}, 2), "Curtsy lunges": ({"legs"}, 2),
+    "Step-ups (on a stair)": ({"legs", "cardio"}, 2), "Calf raises": ({"legs"}, 1), "Donkey kicks": ({"legs"}, 1),
+    "Fire hydrants": ({"legs"}, 1), "Single-leg glute bridge": ({"legs"}, 2), "Pulse squats": ({"legs"}, 2),
+    "Squat hold": ({"legs"}, 2), "Clamshells": ({"legs", "gentle"}, 1), "Side-lying leg raises": ({"legs", "gentle"}, 1),
+    "Good mornings": ({"legs"}, 1), "Jump lunges": ({"legs", "cardio"}, 3), "Skater hops": ({"cardio", "legs"}, 3),
+    "Dead bug": ({"core", "gentle"}, 1), "Bird dog": ({"core", "gentle"}, 1), "Side plank": ({"core"}, 2),
+    "Russian twists": ({"core"}, 2), "Flutter kicks": ({"core"}, 2), "Plank shoulder taps": ({"core", "upper"}, 2),
+    "Heel taps": ({"core"}, 1), "Reverse crunches": ({"core"}, 2), "Hollow hold": ({"core"}, 3), "V-ups": ({"core"}, 3),
+    "Toe touches": ({"core"}, 2), "Seated knee tucks": ({"core"}, 2),
+    "Fast feet": ({"cardio"}, 2), "Squat jacks": ({"cardio", "legs"}, 3), "Star jumps": ({"cardio"}, 3),
+    "Shadow boxing": ({"cardio", "upper"}, 2), "Step jacks (low impact)": ({"cardio", "warmup"}, 1),
+    "Side-to-side shuffle": ({"cardio"}, 2), "Tuck jumps": ({"cardio"}, 3), "Dance cardio": ({"cardio"}, 1),
+    "Standing knee drives": ({"cardio", "warmup"}, 1),
+    "Wall push-ups": ({"upper"}, 1), "Incline push-ups (on a chair)": ({"upper"}, 2), "Push-ups": ({"upper"}, 3),
+    "Chair tricep dips": ({"upper"}, 2), "Plank to downward dog": ({"upper", "core"}, 2), "Plank up-downs": ({"upper", "core"}, 3),
+    "Arm pulses": ({"upper"}, 1), "Bottle shoulder press": ({"upper"}, 1), "Bottle bicep curls": ({"upper"}, 1),
+    "Neck rolls": ({"gentle", "warmup"}, 1), "Shoulder rolls": ({"gentle", "warmup"}, 1), "Hip circles": ({"gentle", "warmup"}, 1),
+    "Standing side stretch": ({"gentle", "cooldown"}, 1), "Hamstring stretch": ({"gentle", "cooldown"}, 1),
+    "Butterfly stretch": ({"gentle", "cooldown"}, 1), "Cobra stretch": ({"gentle", "cooldown"}, 1),
+    "Knee-to-chest stretch": ({"gentle", "cooldown"}, 1), "Torso twists": ({"gentle", "warmup"}, 1),
+    "Deep breathing": ({"gentle", "cooldown"}, 1),
+}
 MOVE = {m[0]: m for m in MOVES}
 
 # Ready-made workouts: (name, minutes including short rests, best for, [(move, sets, amount per set)])
@@ -80,7 +174,7 @@ def move_minutes(name: str, sets: int, amount: float) -> float:
 def amount_text(name: str, sets: int, amount: float) -> str:
     unit = MOVE[name][3]
     if unit == "reps":
-        each = " (both legs)" if name in ("Lunges", "Side lunges") else ""
+        each = " (both sides)" if "Count both" in MOVE[name][5] else ""
         return f"{sets} × {amount:g} reps{each}" if sets > 1 else f"{amount:g} reps{each}"
     if unit == "sec":
         shown = f"{amount / 60:g} min" if amount >= 60 and amount % 60 == 0 else f"{amount:g} sec"

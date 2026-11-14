@@ -150,3 +150,40 @@ def scan_meal(image_bytes: bytes, note: str = "") -> dict:
             last_error = "The AI couldn't read this photo clearly. Try a brighter, closer photo."
 
     raise CoachError(last_error)
+
+
+TEXT_PROMPT = """You are a friendly nutrition assistant for a health coach app used by people with PCOS and
+people recovering from body-shaming. The user describes what they ate, in their own words:
+
+"{meal}"
+
+1. List each food item separately (be specific about Indian / Kerala dishes, e.g. "Kerala matta rice", "sambar",
+   "appam", "fish curry", "thoran").
+2. Use the portion they gave. If they didn't give one, assume a normal home portion and say what you assumed.
+3. Estimate calories and macronutrients for that portion.
+4. Give ONE short, positive, PCOS-friendly tip. Never call any food "bad" or "junk", and never make them feel guilty.
+
+Reply with ONLY valid JSON in exactly this format:
+{{
+  "items": [
+    {{"name": "Kerala matta rice", "portion": "1 cup (150 g)", "calories": 200,
+      "protein_g": 4, "carbs_g": 44, "fat_g": 1, "fibre_g": 2}}
+  ],
+  "tip": "short positive tip",
+  "confidence": "high | medium | low"
+}}
+If the text doesn't describe any food, return {{"items": [], "tip": "I couldn't find any food in that. Try listing what you ate.", "confidence": "low"}}.
+"""
+
+
+def describe_meal(text: str) -> dict:
+    """Estimate a meal from words instead of a photo ("2 chapatis, dal, a bowl of curd"). Same result format as scan_meal.
+    Uses the coach's model chain (OpenRouter first, then Gemini), so it works even if one model is busy."""
+    import coach
+    raw = coach.call_ai([{"role": "user", "content": TEXT_PROMPT.format(meal=text.strip()[:600])}],
+                        max_tokens=900, temperature=0.2)
+    try:
+        return _parse_json(raw)
+    except (ValueError, TypeError, AttributeError):
+        raise CoachError("Tulsi couldn't work that meal out. Try listing the foods and roughly how much, "
+                         "e.g. '2 chapatis, 1 cup dal, some cucumber salad'.")

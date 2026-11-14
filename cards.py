@@ -83,13 +83,13 @@ def share_card(profile: dict, show_weight: bool = False, show_win: bool = True) 
     img = _gradient(W, H)
     d = ImageDraw.Draw(img)
     name = profile.get("name") or "My"
-    d.text((80, 80), f"{name}'s FitBuddy journey" if profile.get("name") else "My FitBuddy journey", font=_font(54, True), fill="white")
+    d.text((80, 80), f"{name}'s journey with Tulsi" if profile.get("name") else "My journey with Tulsi", font=_font(54, True), fill="white")
     d.text((80, 150), date.today().strftime("%d %B %Y"), font=_font(32), fill=(239, 230, 251))
 
     d.rounded_rectangle([60, 230, W - 60, H - 130], radius=48, fill="white")
     d.ellipse([W / 2 - 190, 280, W / 2 + 190, 660], fill=LAVENDER)
     _draw_tulsi(d, W // 2, 545, 100, g["stage"])
-    d.text((W / 2, 700), f"Tulsi is a {g['name'].lower()}", font=_font(44, True), fill=PURPLE_DARK, anchor="mm")
+    d.text((W / 2, 700), f"Tulsi is a {g['name'].lower()}" + (f" with {g['flowers']} flower{'s' if g['flowers'] > 1 else ''}" if g.get("flowers", 0) > 1 else ""), font=_font(44, True), fill=PURPLE_DARK, anchor="mm")
 
     tiles = [(f"{km_month:,.0f} km", "walked this month"), (f"{walks_month:.0f}", "walks this month"),
              (f"{len(badges)}", "badges earned"), (f"{journey._streak(checkins, date.today())}", "best check-in streak")]
@@ -107,7 +107,7 @@ def share_card(profile: dict, show_weight: bool = False, show_win: bool = True) 
         text = wins[-1]["text"]
         text = text if len(text) <= 52 else text[:49] + "..."
         d.text((W / 2, 1148), f"Latest win: {text}", font=_font(34, True), fill=PURPLE, anchor="mm")
-    d.text((W / 2, H - 65), "Built with FitBuddy  ·  kind, judgement-free coaching with Tulsi",
+    d.text((W / 2, H - 65), "Made with Tulsi  ·  kind, judgement-free health coaching",
            font=_font(28), fill=(239, 230, 251), anchor="mm")
     buf = io.BytesIO()
     img.save(buf, "PNG")
@@ -141,7 +141,7 @@ def doctor_report(profile: dict) -> bytes:
 
     d.rectangle([0, 0, W, 150], fill=PURPLE_DARK)
     d.text((M, 45), "Health summary for my doctor", font=_font(44, True), fill="white")
-    d.text((M, 102), f"Prepared {today.strftime('%d %B %Y')} with FitBuddy (self-tracked data, not a medical record)",
+    d.text((M, 102), f"Prepared {today.strftime('%d %B %Y')} with the Tulsi app (self-tracked data, not a medical record)",
            font=_font(22), fill=(239, 230, 251))
     y = 190
 
@@ -233,7 +233,7 @@ def doctor_report(profile: dict) -> bytes:
         d.line([(M, y + 30), (W - M, y + 30)], fill=(220, 210, 235), width=2)
         y += 52
 
-    d.text((M, H - 70), "Self-reported data from the FitBuddy app. Not a diagnosis.", font=_font(20), fill=MUTED)
+    d.text((M, H - 70), "Self-reported data from the Tulsi app. Not a diagnosis.", font=_font(20), fill=MUTED)
     buf = io.BytesIO()
     img.save(buf, "PDF", resolution=150)
     return buf.getvalue()
