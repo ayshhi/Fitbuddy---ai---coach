@@ -237,9 +237,10 @@ squats, and I ate a **proper planned diet**. So I made both specific:
 - To reduce clutter, Food scan moved into the same page as a tab, so the menu is one item shorter.
 
 **Polish after testing on my laptop:**
-- Text was still small on my wide screen. The CSS font-size rule was being overridden by Streamlit, so now a tiny
-  script sets the text size from the window width (bigger screen = bigger text) and updates when the window is resized.
-  The Home rainbow is sized to the screen height, so Home fills the whole screen.
+- Text was still small on my wide screen. Streamlit controls the page's base font size, so neither a CSS rule nor
+  changing it with a script stuck. The fix: the app is designed for a 1450 px wide window, and a small script
+  **scales the whole app** (text, buttons, cards, pop-ups) to the real window width, like automatic browser zoom.
+  It also works if the browser itself is zoomed out. Home went back to a fixed-size rainbow that fits on one screen.
 - Exercise: the list of what I logged no longer pushes everything down at the top. It lives in a "📅 My log" tab.
 - Crossword: my own-theme clues were bland dictionary definitions ("Woman who performs in movies"). The prompt now asks
   for theme-specific answers (names, titles, dishes) and quiz-style clues (facts, famous lines, fill-in-the-blanks).

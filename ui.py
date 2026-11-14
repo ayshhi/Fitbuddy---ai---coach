@@ -40,7 +40,9 @@ CSS = """
 }
 /* Bigger text everywhere (no more zooming), and content centred at a comfortable width */
 /* Text and layout grow with the screen, so big / high-resolution monitors aren't tiny */
-html { font-size: clamp(18px, calc(1vw + 5px), 34px) !important; }
+html { font-size: 18px !important; }
+/* the whole app is scaled to the window width by ui.auto_size() */
+[data-testid="stMain"], section.main, section[data-testid="stSidebar"], div[role="dialog"], [data-testid="stPopoverBody"] { zoom: var(--fbz, 1); }
 /* on computer screens, keep columns side by side instead of letting them wrap onto new lines */
 @media (min-width: 900px) {
   [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; }
@@ -592,9 +594,8 @@ def section(title: str, subtitle: str = "") -> None:
 
 HOME_CSS = """
 <style>
-.home { position:relative; text-align:center; padding: 1rem 0 0; min-height: calc(100vh - 9rem);
-        display:flex; flex-direction:column; justify-content:center; }
-.home .sky { position:relative; width:min(94%, calc((100vh - 21rem) * 1.8)); margin:0 auto; }
+.home { position:relative; text-align:center; padding: .5rem 0 0; }
+.home .sky { position:relative; width:min(40rem, 94%); margin:0 auto; }
 .home .sky svg { width:100%; height:auto; display:block; overflow:visible; }
 .home .arc { fill:none; stroke-linecap:round; stroke-dasharray: 1000; stroke-dashoffset: 1000;
              animation: draw-arc 1.6s ease-out forwards; }
@@ -841,14 +842,18 @@ def card_header(icon: str, title: str, subtitle: str = "", tint: str = "#F1EAFB"
 
 
 def auto_size() -> None:
-    """Sets the base text size from the window width, so big or high-resolution screens never look tiny.
-    Done with a script because Streamlit's own font-size setting was overriding the CSS rule."""
+    """Scales the whole app (text, buttons, cards) to the window width, like browser zoom done automatically.
+    The page is designed for a 1450 px wide window; wider windows (or a zoomed-out browser) get scaled up,
+    so text is never tiny. Streamlit controls the page's base font size, so zoom is used instead of font-size."""
     import streamlit.components.v1 as components
     components.html("""<script>
-    const w = window.parent;
+    const w = window.parent, d = w.document;
+    d.documentElement.style.removeProperty('font-size');
+    let s = d.getElementById('fb-autosize');
+    if (!s) { s = d.createElement('style'); s.id = 'fb-autosize'; d.head.appendChild(s); }
     function fit() {
-      const px = Math.max(18, Math.min(36, w.innerWidth * 0.0105 + 4));
-      w.document.documentElement.style.setProperty('font-size', px.toFixed(1) + 'px', 'important');
+      const z = Math.max(1, Math.min(2.6, w.innerWidth / 1450));
+      s.textContent = ':root { --fbz: ' + z.toFixed(3) + '; }';
     }
     fit();
     if (!w.__fbResize) { w.__fbResize = true; w.addEventListener('resize', fit); }
